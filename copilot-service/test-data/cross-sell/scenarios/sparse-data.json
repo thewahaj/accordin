@@ -1,0 +1,32 @@
+{
+  "_meta": {
+    "title": "Sparse Data - New Account",
+    "description": "Prospect account with minimal CRM history. Tests data-limited behaviour and whether the model flags gaps explicitly rather than hallucinating.",
+    "tags": ["new account", "sparse data", "data limitations"],
+    "difficulty": "data-limited"
+  },
+  "planIntent": "Create a plan to enter this account.",
+  "planType": "cross-sell",
+  "account": {
+    "id": "ACC-003",
+    "name": "Orion Retail Group",
+    "industry": "Retail",
+    "region": "Birmingham, UK",
+    "tier": "Tier 2",
+    "annualRevenue": null,
+    "relationshipScore": null
+  },
+  "productsOwned": [],
+  "opportunities": [
+    { "name": "Initial Discovery", "stage": "Qualify", "value": 15000, "closeDate": "2026-05-30", "status": "Open" }
+  ],
+  "contacts": [
+    { "name": "Unknown", "title": "IT Director", "city": "Birmingham", "lastActivity": null, "engagementLevel": "Unknown" }
+  ],
+  "activities": [],
+  "commercialSignals": [],
+  "marketingSignals": [
+    { "type": "Web Visit", "summary": "Someone from Orion Retail visited the pricing page twice in the last 30 days", "date": "2026-02-20", "engagementLevel": "Medium" }
+  ],
+  "planHistory": []
+}

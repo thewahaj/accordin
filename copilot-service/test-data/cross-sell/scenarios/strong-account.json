@@ -1,0 +1,46 @@
+{
+  "_meta": {
+    "title": "Strong Expansion Candidate",
+    "description": "Healthy Tier 1 account with active pipeline, positive marketing signals, and good relationship score. Tests core cross-sell planning.",
+    "tags": ["expansion", "AI product", "Tier 1"],
+    "difficulty": "straightforward"
+  },
+  "planIntent": "How can we expand our newly launched AI product into this account?",
+  "planType": "cross-sell",
+  "account": {
+    "id": "ACC-001",
+    "name": "Meridian Logistics UK",
+    "industry": "Logistics",
+    "region": "London, UK",
+    "tier": "Tier 1",
+    "annualRevenue": 180000,
+    "relationshipScore": 72
+  },
+  "productsOwned": [
+    { "name": "Core CRM Platform", "startDate": "2022-03-01", "renewalDate": "2026-03-01", "value": 120000 },
+    { "name": "Service Management Module", "startDate": "2023-06-01", "renewalDate": "2026-06-01", "value": 60000 }
+  ],
+  "opportunities": [
+    { "name": "Analytics Expansion", "stage": "Qualify", "value": 45000, "closeDate": "2026-06-30", "status": "Open" },
+    { "name": "Field Service Pilot", "stage": "Propose", "value": 28000, "closeDate": "2026-04-30", "status": "Open" }
+  ],
+  "contacts": [
+    { "name": "James Hartley", "title": "CTO", "city": "London", "lastActivity": "2025-12-10", "engagementLevel": "Medium" },
+    { "name": "Priya Menon", "title": "Head of Operations", "city": "London", "lastActivity": "2026-01-22", "engagementLevel": "High" },
+    { "name": "David Walsh", "title": "CFO", "city": "London", "lastActivity": "2025-09-15", "engagementLevel": "Low" }
+  ],
+  "activities": [
+    { "type": "Meeting", "subject": "Q4 Business Review", "date": "2025-12-10", "status": "Completed" },
+    { "type": "Call", "subject": "Analytics module demo follow-up", "date": "2026-01-08", "status": "Completed" },
+    { "type": "Email", "subject": "Field service pilot proposal sent", "date": "2026-01-22", "status": "Completed" }
+  ],
+  "commercialSignals": [
+    { "type": "Invoice", "summary": "Invoice INV-2241 paid on time", "date": "2026-01-15", "sentiment": "Positive" },
+    { "type": "Order", "summary": "Renewal order placed for Core CRM", "date": "2025-12-01", "sentiment": "Positive" }
+  ],
+  "marketingSignals": [
+    { "type": "Email Click", "summary": "CTO clicked AI product launch email - opened roadmap PDF", "date": "2026-02-14", "engagementLevel": "High" },
+    { "type": "Webinar", "summary": "Head of Operations attended AI in Logistics webinar", "date": "2026-01-30", "engagementLevel": "High" }
+  ],
+  "planHistory": []
+}

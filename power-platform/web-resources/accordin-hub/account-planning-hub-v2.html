@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Account Planning Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:        #0e1e35;
+  --navy-mid:    #152844;
+  --navy-light:  #1c3455;
+  --navy-border: #263f60;
+  --blue:        #2463eb;
+  --blue-lt:     #3b82f6;
+  --blue-pale:   #eff6ff;
+  --teal:        #0d9488;
+  --teal-pale:   #f0fdfa;
+  --amber:       #b45309;
+  --amber-pale:  #fffbeb;
+  --red:         #b91c1c;
+  --red-pale:    #fef2f2;
+  --green:       #15803d;
+  --green-pale:  #f0fdf4;
+  --slate:       #64748b;
+  --slate-lt:    #94a3b8;
+  --white:       #ffffff;
+  --off-white:   #f8fafc;
+  --surface:     #f1f5f9;
+  --border:      #e2e8f0;
+  --border-mid:  #cbd5e1;
+  --text:        #0f172a;
+  --text-mid:    #334155;
+  --text-muted:  #64748b;
+  --font:        'Inter', sans-serif;
+  --mono:        'JetBrains Mono', monospace;
+  --r:           5px;
+  --r-lg:        8px;
+  --shadow-xs:   0 1px 2px rgba(0,0,0,.06);
+  --shadow-sm:   0 1px 4px rgba(0,0,0,.08);
+  --shadow:      0 4px 16px rgba(0,0,0,.10);
+  --shadow-lg:   0 16px 48px rgba(0,0,0,.14);
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:var(--font); background:var(--surface); color:var(--text); font-size:13px; line-height:1.5; min-height:100vh; }
+
+/* ── HEADER ─────────────────────────────────────────────── */
+.hdr { background:var(--navy); height:52px; padding:0 24px; display:flex; align-items:center; gap:20px; position:sticky; top:0; z-index:100; border-bottom:1px solid var(--navy-border); }
+.hdr-logo { display:flex; align-items:center; gap:9px; color:var(--white); font-size:13px; font-weight:600; letter-spacing:-.02em; white-space:nowrap; }
+.hdr-logo-mark { width:26px; height:26px; background:var(--blue); border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:13px; color:white; }
+.hdr-sep { width:1px; height:20px; background:var(--navy-border); }
+.hdr-nav { display:flex; gap:1px; }
+.hdr-nav-btn { padding:5px 11px; border-radius:var(--r); font-size:12px; color:var(--slate-lt); cursor:pointer; border:none; background:transparent; font-family:var(--font); transition:all .15s; white-space:nowrap; }
+.hdr-nav-btn:hover { color:white; background:var(--navy-light); }
+.hdr-nav-btn.on { color:white; background:var(--navy-light); font-weight:500; }
+.hdr-right { margin-left:auto; display:flex; gap:8px; align-items:center; }
+.avatar { width:28px; height:28px; border-radius:50%; background:var(--blue); color:white; font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+
+/* ── MAIN ────────────────────────────────────────────────── */
+.main { padding:22px 24px; max-width:1440px; }
+
+/* ── PAGE TITLE ──────────────────────────────────────────── */
+.pg-row { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:18px; }
+.pg-title { font-size:18px; font-weight:600; color:var(--text); letter-spacing:-.03em; }
+.pg-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
+
+/* ── BUTTONS ─────────────────────────────────────────────── */
+.btn { display:inline-flex; align-items:center; gap:5px; padding:6px 13px; border-radius:var(--r); font-size:12px; font-weight:500; cursor:pointer; transition:all .15s; border:none; font-family:var(--font); }
+.btn-primary { background:var(--blue); color:white; }
+.btn-primary:hover { background:var(--blue-lt); }
+.btn-secondary { background:white; color:var(--text-mid); border:1px solid var(--border); box-shadow:var(--shadow-xs); }
+.btn-secondary:hover { background:var(--surface); border-color:var(--border-mid); }
+
+/* ── SUMMARY CARDS ───────────────────────────────────────── */
+.cards { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:18px; }
+.card { background:white; border:1px solid var(--border); border-radius:var(--r-lg); padding:14px 16px; box-shadow:var(--shadow-xs); }
+.card-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); margin-bottom:5px; }
+.card-val { font-size:20px; font-weight:700; font-family:var(--mono); letter-spacing:-.03em; }
+.card-val.blue { color:var(--blue); }
+.card-val.green { color:var(--green); }
+.card-val.amber { color:var(--amber); }
+.card-val.red { color:var(--red); }
+.card-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
+
+/* ── FILTERS ─────────────────────────────────────────────── */
+.filters { display:flex; gap:7px; align-items:center; margin-bottom:12px; }
+.search { padding:6px 11px; border:1px solid var(--border); border-radius:var(--r); font-size:12px; font-family:var(--font); background:white; color:var(--text); width:200px; outline:none; }
+.search:focus { border-color:var(--blue); }
+.chip { padding:4px 11px; border-radius:20px; font-size:11px; font-weight:500; cursor:pointer; border:1px solid var(--border); background:white; color:var(--text-muted); transition:all .15s; }
+.chip:hover,.chip.on { background:var(--navy); color:white; border-color:var(--navy); }
+.sort-select { font-size:11px; border:1px solid var(--border); border-radius:var(--r); padding:4px 8px; font-family:var(--font); background:white; color:var(--text-mid); cursor:pointer; }
+
+/* ── ACCOUNTS TABLE ──────────────────────────────────────── */
+.tbl-wrap { background:white; border:1px solid var(--border); border-radius:var(--r-lg); box-shadow:var(--shadow-xs); overflow:hidden; }
+.tbl { width:100%; border-collapse:collapse; }
+.tbl thead { background:var(--off-white); border-bottom:1px solid var(--border); }
+.tbl th { padding:9px 14px; text-align:left; font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
+.tbl td { padding:11px 14px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.tbl tr:last-child td { border-bottom:none; }
+.tbl tbody tr { cursor:pointer; transition:background .1s; }
+.tbl tbody tr:hover { background:#f8faff; }
+
+.acc-cell { display:flex; align-items:center; gap:9px; }
+.acc-av { width:30px; height:30px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:white; flex-shrink:0; }
+.acc-name { font-size:13px; font-weight:600; color:var(--text); line-height:1.2; }
+.acc-ind { font-size:11px; color:var(--text-muted); }
+
+.tier { display:inline-flex; align-items:center; padding:2px 7px; border-radius:3px; font-size:10px; font-weight:700; font-family:var(--mono); letter-spacing:.02em; }
+.t1 { background:var(--navy); color:white; }
+.t2 { background:var(--surface); color:var(--text-mid); border:1px solid var(--border); }
+.t3 { background:var(--surface); color:var(--slate); border:1px solid var(--border); }
+
+.rag { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500; }
+.rag::before { content:''; width:7px; height:7px; border-radius:50%; display:inline-block; flex-shrink:0; }
+.rag-g { color:var(--green); } .rag-g::before { background:var(--green); box-shadow:0 0 0 2px #dcfce7; }
+.rag-a { color:var(--amber); } .rag-a::before { background:#f59e0b; box-shadow:0 0 0 2px #fef3c7; }
+.rag-r { color:var(--red); }   .rag-r::before { background:var(--red);   box-shadow:0 0 0 2px #fee2e2; }
+
+.att { display:inline-block; padding:2px 8px; border-radius:3px; font-size:11px; font-weight:500; max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.att-r { background:var(--red-pale); color:var(--red); }
+.att-a { background:var(--amber-pale); color:var(--amber); }
+.att-n { color:var(--text-muted); font-size:11px; }
+
+.prog-wrap { display:flex; align-items:center; gap:7px; min-width:120px; }
+.prog-bg { flex:1; height:4px; background:var(--surface); border-radius:2px; overflow:hidden; }
+.prog-fill { height:100%; border-radius:2px; background:var(--blue); }
+.prog-fill.done { background:var(--green); }
+.prog-pct { font-size:11px; font-weight:600; color:var(--text-mid); font-family:var(--mono); min-width:28px; }
+
+.plan-st { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:3px; font-size:11px; font-weight:500; }
+.st-active { background:var(--blue-pale); color:var(--blue); }
+.st-draft  { background:var(--amber-pale); color:var(--amber); }
+.st-none   { background:var(--surface); color:var(--slate); }
+
+.row-acts { display:flex; gap:4px; opacity:0; transition:opacity .15s; }
+.tbl tbody tr:hover .row-acts { opacity:1; }
+.row-btn { padding:4px 9px; border-radius:3px; font-size:11px; font-weight:500; cursor:pointer; border:1px solid var(--border); background:white; color:var(--text-mid); font-family:var(--font); transition:all .15s; white-space:nowrap; }
+.row-btn:hover { background:var(--navy); color:white; border-color:var(--navy); }
+.row-btn.pri { background:var(--blue); color:white; border-color:var(--blue); }
+.row-btn.pri:hover { background:var(--blue-lt); }
+
+/* ── PANEL ───────────────────────────────────────────────── */
+.overlay { position:fixed; inset:0; background:rgba(14,30,53,.45); z-index:200; opacity:0; pointer-events:none; transition:opacity .25s; backdrop-filter:blur(2px); }
+.overlay.on { opacity:1; pointer-events:all; }
+
+.panel { position:fixed; top:0; right:0; bottom:0; width:92%; max-width:1340px; background:var(--off-white); z-index:201; display:flex; flex-direction:column; transform:translateX(100%); transition:transform .32s cubic-bezier(.16,1,.3,1); box-shadow:var(--shadow-lg); }
+.panel.on { transform:translateX(0); }
+
+/* ── PANEL HEADER ────────────────────────────────────────── */
+.p-hdr { background:var(--navy); padding:0 20px; height:52px; display:flex; align-items:center; gap:14px; flex-shrink:0; border-bottom:1px solid var(--navy-border); }
+.p-close { width:28px; height:28px; border-radius:5px; border:1px solid var(--navy-border); background:transparent; color:var(--slate-lt); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:15px; transition:all .15s; }
+.p-close:hover { background:var(--navy-light); color:white; }
+.p-acc-name { font-size:14px; font-weight:600; color:white; letter-spacing:-.02em; }
+.p-acc-meta { font-size:11px; color:var(--slate-lt); }
+.p-tabs { display:flex; gap:1px; margin-left:12px; }
+.p-tab { padding:5px 13px; border-radius:var(--r); font-size:12px; font-weight:500; cursor:pointer; color:var(--slate-lt); border:none; background:transparent; transition:all .15s; font-family:var(--font); }
+.p-tab.on { background:var(--navy-light); color:white; }
+.p-tab:hover { color:white; }
+.p-hdr-right { margin-left:auto; display:flex; gap:7px; align-items:center; }
+
+/* ── PANEL BODY ──────────────────────────────────────────── */
+.p-body { flex:1; display:flex; overflow:hidden; }
+
+/* LEFT */
+.p-left { width:300px; flex-shrink:0; background:white; border-right:1px solid var(--border); overflow-y:auto; display:flex; flex-direction:column; }
+.p-sec { padding:14px 16px; border-bottom:1px solid var(--border); }
+.p-sec:last-child { border-bottom:none; }
+.sec-lbl { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); margin-bottom:9px; }
+.stat-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+.stat-k { font-size:11px; color:var(--text-muted); }
+.stat-v { font-size:12px; font-weight:600; color:var(--text); }
+.stat-v.blue { color:var(--blue); }
+.stat-v.green { color:var(--green); }
+.rel-bar { height:5px; background:var(--surface); border-radius:3px; overflow:hidden; margin-top:5px; }
+.rel-fill { height:100%; background:linear-gradient(90deg,var(--teal),var(--blue)); border-radius:3px; }
+
+.open-text { font-size:12px; color:var(--text-mid); line-height:1.65; font-style:italic; }
+
+.rev-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; margin-bottom:9px; }
+.rev-cell { background:var(--surface); border-radius:var(--r); padding:8px; text-align:center; }
+.rev-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); margin-bottom:3px; }
+.rev-val { font-size:13px; font-weight:700; font-family:var(--mono); }
+.rev-val.lo { color:var(--slate); } .rev-val.md { color:var(--blue); } .rev-val.hi { color:var(--green); }
+.fc-text { font-size:11px; color:var(--text-mid); line-height:1.6; }
+
+.sig-item { display:flex; gap:7px; margin-bottom:6px; align-items:flex-start; }
+.sig-dot { width:5px; height:5px; border-radius:50%; background:var(--green); margin-top:5px; flex-shrink:0; }
+.sig-text { font-size:11px; color:var(--text-mid); line-height:1.5; }
+.wo-item { background:var(--red-pale); border-left:2px solid var(--red); padding:7px 9px; border-radius:0 3px 3px 0; margin-bottom:5px; font-size:11px; color:#991b1b; line-height:1.5; }
+.lim-item { display:flex; gap:7px; margin-bottom:5px; font-size:11px; color:var(--text-muted); line-height:1.5; align-items:flex-start; }
+
+/* MIDDLE */
+.p-mid { flex:1; overflow-y:auto; display:flex; flex-direction:column; min-width:0; }
+.m-sec { padding:14px 18px; border-bottom:1px solid var(--border); }
+.m-sec:last-child { border-bottom:none; }
+.m-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:11px; }
+.m-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-muted); }
+.m-count { font-size:10px; font-weight:600; color:var(--text-muted); background:var(--surface); padding:2px 6px; border-radius:10px; }
+
+/* Contact engagement */
+.gap-warn { background:var(--red-pale); border:1px solid #fca5a5; border-radius:var(--r); padding:8px 11px; font-size:11px; color:var(--red); display:flex; gap:7px; align-items:flex-start; margin-bottom:8px; }
+.c-row { display:flex; gap:9px; align-items:flex-start; padding:9px 11px; border-radius:var(--r); border:1px solid var(--border); margin-bottom:5px; background:white; transition:border-color .15s; }
+.c-row:hover { border-color:var(--blue-lt); }
+.c-row.c-primary { border-left:2px solid var(--blue); }
+.c-row.c-risk { border-left:2px solid var(--red); }
+.c-av { width:26px; height:26px; border-radius:50%; background:var(--navy); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:white; flex-shrink:0; }
+.c-info { flex:1; min-width:0; }
+.c-name-row { display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:1px; }
+.c-name { font-size:12px; font-weight:600; color:var(--text); }
+.c-title-txt { font-size:11px; color:var(--text-muted); margin-bottom:3px; }
+.role-b { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; padding:1px 5px; border-radius:2px; white-space:nowrap; }
+.rb-primary { background:var(--blue-pale); color:var(--blue); }
+.rb-owner   { background:var(--green-pale); color:var(--green); }
+.rb-risk    { background:var(--red-pale); color:var(--red); }
+.rb-low     { background:var(--surface); color:var(--slate); }
+.c-meta { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.eng-b { font-size:10px; font-weight:600; padding:1px 5px; border-radius:2px; }
+.eb-h { background:var(--green-pale); color:var(--green); }
+.eb-m { background:var(--amber-pale); color:var(--amber); }
+.eb-l { background:var(--red-pale); color:var(--red); }
+.eb-u { background:var(--surface); color:var(--slate); }
+.c-act { font-size:10px; color:var(--text-muted); }
+.cad-tag { font-size:9px; font-weight:600; padding:1px 5px; border-radius:2px; background:var(--teal-pale); color:var(--teal); }
+.c-note { font-size:11px; color:var(--text-muted); font-style:italic; line-height:1.4; margin-top:3px; }
+
+/* Recommendations */
+.rec { border:1px solid var(--border); border-radius:var(--r-lg); padding:13px; margin-bottom:7px; background:white; transition:border-color .15s,box-shadow .15s; }
+.rec:hover { border-color:var(--blue-lt); box-shadow:var(--shadow-sm); }
+.rec-hdr { display:flex; align-items:flex-start; gap:9px; margin-bottom:7px; }
+.rec-num { width:20px; height:20px; border-radius:50%; background:var(--navy); color:white; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-family:var(--mono); }
+.rec-prod { font-size:13px; font-weight:600; color:var(--text); line-height:1.2; }
+.rec-type { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; }
+.conf-b { font-size:10px; font-weight:700; padding:2px 6px; border-radius:3px; flex-shrink:0; margin-left:auto; }
+.cb-h { background:var(--green-pale); color:var(--green); }
+.cb-m { background:var(--amber-pale); color:var(--amber); }
+.cb-l { background:var(--surface); color:var(--slate); }
+.rec-val { font-size:17px; font-weight:700; color:var(--blue); font-family:var(--mono); margin-bottom:5px; }
+.rec-desc { font-size:12px; color:var(--text-mid); line-height:1.5; margin-bottom:4px; }
+.rec-rat { font-size:11px; color:var(--text-muted); font-style:italic; line-height:1.5; }
+
+/* Cadences */
+.cad { border:1px solid var(--border); border-radius:var(--r); padding:11px 13px; margin-bottom:5px; background:white; display:flex; gap:11px; align-items:flex-start; }
+.cad-icon { width:30px; height:30px; border-radius:7px; background:var(--blue-pale); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+.cad-name { font-size:12px; font-weight:600; color:var(--text); margin-bottom:3px; }
+.cad-contact { font-size:11px; color:var(--blue); font-weight:500; margin-bottom:4px; }
+.cad-chips { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:4px; }
+.cad-chip { font-size:10px; font-weight:500; padding:1px 6px; border-radius:3px; background:var(--surface); color:var(--text-muted); border:1px solid var(--border); }
+.cad-chip.remote { background:var(--teal-pale); color:var(--teal); border-color:transparent; }
+.cad-purp { font-size:11px; color:var(--text-muted); line-height:1.4; }
+
+/* Actions */
+.act { border:1px solid var(--border); border-radius:var(--r); padding:9px 13px; margin-bottom:5px; background:white; display:flex; gap:9px; align-items:flex-start; }
+.prio-b { font-size:9px; font-weight:700; padding:2px 5px; border-radius:2px; text-transform:uppercase; letter-spacing:.04em; flex-shrink:0; margin-top:1px; }
+.pb-h { background:var(--red-pale); color:var(--red); }
+.pb-m { background:var(--amber-pale); color:var(--amber); }
+.pb-l { background:var(--surface); color:var(--slate); }
+.act-desc { font-size:12px; color:var(--text); flex:1; line-height:1.5; }
+.act-timing { font-size:10px; color:var(--text-muted); margin-top:2px; font-family:var(--mono); }
+
+/* RIGHT - CHAT */
+.p-right { width:320px; flex-shrink:0; background:var(--navy); border-left:1px solid var(--navy-border); display:flex; flex-direction:column; }
+.chat-hdr { padding:13px 15px; border-bottom:1px solid var(--navy-border); display:flex; align-items:center; gap:8px; }
+.chat-hdr-title { font-size:13px; font-weight:600; color:white; }
+.chat-hdr-sub { font-size:11px; color:var(--slate-lt); margin-top:1px; }
+.chat-status { margin-left:auto; width:6px; height:6px; border-radius:50%; background:var(--teal); box-shadow:0 0 0 2px rgba(13,148,136,.3); }
+.chat-msgs { flex:1; overflow-y:auto; padding:13px; display:flex; flex-direction:column; gap:10px; }
+.chat-msgs::-webkit-scrollbar { width:3px; }
+.chat-msgs::-webkit-scrollbar-thumb { background:var(--navy-border); border-radius:2px; }
+.msg { display:flex; flex-direction:column; gap:3px; animation:fadeUp .25s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+.msg-bubble { padding:9px 11px; border-radius:9px; font-size:12px; line-height:1.6; max-width:88%; }
+.msg.user { align-items:flex-end; }
+.msg.user .msg-bubble { background:var(--blue); color:white; border-bottom-right-radius:2px; }
+.msg.ai .msg-bubble { background:var(--navy-light); color:var(--off-white); border-bottom-left-radius:2px; border:1px solid var(--navy-border); }
+.msg-time { font-size:10px; color:var(--slate-lt); }
+.plan-upd { background:var(--teal); color:white; font-size:10px; font-weight:600; padding:3px 9px; border-radius:3px; align-self:center; display:flex; gap:4px; align-items:center; }
+.q-prompts { padding:9px 13px; border-top:1px solid var(--navy-border); display:flex; gap:5px; flex-wrap:wrap; }
+.q-btn { font-size:10px; padding:3px 8px; border-radius:12px; border:1px solid var(--navy-border); color:var(--slate-lt); cursor:pointer; transition:all .15s; background:transparent; font-family:var(--font); white-space:nowrap; }
+.q-btn:hover { background:var(--navy-light); color:white; border-color:var(--navy-light); }
+.chat-inp-area { padding:11px 13px; border-top:1px solid var(--navy-border); }
+.chat-inp-wrap { display:flex; gap:7px; align-items:flex-end; background:var(--navy-light); border:1px solid var(--navy-border); border-radius:9px; padding:7px 9px; transition:border-color .15s; }
+.chat-inp-wrap:focus-within { border-color:var(--blue); }
+.chat-ta { flex:1; background:transparent; border:none; outline:none; color:white; font-size:12px; font-family:var(--font); resize:none; max-height:90px; line-height:1.5; }
+.chat-ta::placeholder { color:var(--slate); }
+.send-btn { width:26px; height:26px; border-radius:5px; background:var(--blue); border:none; color:white; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; transition:background .15s; flex-shrink:0; }
+.send-btn:hover { background:var(--blue-lt); }
+
+/* CREATE MODE */
+.create-mode { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; padding:36px; background:white; text-align:center; }
+.create-icon { font-size:36px; margin-bottom:14px; }
+.create-title { font-size:17px; font-weight:600; color:var(--text); margin-bottom:5px; letter-spacing:-.02em; }
+.create-sub { font-size:13px; color:var(--text-muted); margin-bottom:24px; max-width:340px; }
+.intent-opts { display:flex; flex-direction:column; gap:7px; width:100%; max-width:400px; margin-bottom:24px; }
+.intent-opt { border:1px solid var(--border); border-radius:var(--r-lg); padding:13px 15px; cursor:pointer; text-align:left; background:white; display:flex; gap:11px; align-items:center; transition:all .15s; }
+.intent-opt:hover,.intent-opt.on { border-color:var(--blue); background:var(--blue-pale); }
+.intent-emoji { font-size:18px; }
+.intent-lbl { font-size:13px; font-weight:600; color:var(--text); }
+.intent-desc { font-size:11px; color:var(--text-muted); }
+
+/* LOADING */
+.spin { width:28px; height:28px; border:2px solid var(--border); border-top-color:var(--blue); border-radius:50%; animation:spin .7s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+/* SCROLLBARS */
+.p-left::-webkit-scrollbar,.p-mid::-webkit-scrollbar { width:3px; }
+.p-left::-webkit-scrollbar-thumb,.p-mid::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+/* DATAVERSE API notice */
+.api-notice { background:var(--blue-pale); border:1px solid #bfdbfe; border-radius:var(--r); padding:8px 12px; font-size:11px; color:var(--blue); margin-bottom:14px; display:flex; gap:8px; align-items:flex-start; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-logo">
+    <div class="hdr-logo-mark">◈</div>
+    Account Planning
+  </div>
+  <div class="hdr-sep"></div>
+  <nav class="hdr-nav">
+    <button class="hdr-nav-btn on">My Accounts</button>
+    <button class="hdr-nav-btn">Portfolio</button>
+    <button class="hdr-nav-btn">Plan Archive</button>
+    <button class="hdr-nav-btn">Analytics</button>
+  </nav>
+  <div class="hdr-right">
+    <button class="btn btn-primary" onclick="openCreatePanel()">+ New Plan</button>
+    <div class="avatar">WR</div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="main">
+
+  <div class="pg-row">
+    <div>
+      <div class="pg-title">My Account Plans</div>
+      <div class="pg-sub" id="pgSub">Loading from Dataverse...</div>
+    </div>
+    <div style="display:flex;gap:7px;">
+      <button class="btn btn-secondary">⬇ Export</button>
+      <button class="btn btn-secondary">⚙ Configure</button>
+    </div>
+  </div>
+
+  <!-- API Notice - shows when running standalone (not in D365 context) -->
+  <div class="api-notice" id="apiNotice">
+    ℹ Running in standalone mode with mock data. When deployed as a D365 web resource, this page reads live data from <strong>wrl_accountplans</strong>, <strong>accounts</strong>, and related tables via the Dataverse Web API.
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="cards">
+    <div class="card"><div class="card-label">Active Plans</div><div class="card-val blue" id="cActive">—</div><div class="card-sub" id="cActiveSub">Loading...</div></div>
+    <div class="card"><div class="card-label">Combined Target</div><div class="card-val" id="cTarget">—</div><div class="card-sub">Stage-weighted pipeline</div></div>
+    <div class="card"><div class="card-label">Achieved YTD</div><div class="card-val green" id="cAchieved">—</div><div class="card-sub" id="cAchievedSub">Loading...</div></div>
+    <div class="card"><div class="card-label">Require Attention</div><div class="card-val amber" id="cAttention">—</div><div class="card-sub">Approval risks or stalled</div></div>
+    <div class="card"><div class="card-label">Overdue Cadences</div><div class="card-val red" id="cCadences">—</div><div class="card-sub">Across active accounts</div></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <input type="text" class="search" placeholder="🔍  Search accounts..." oninput="filterAccounts(this.value)">
+    <button class="chip on" onclick="setFilter('all',this)">All</button>
+    <button class="chip" onclick="setFilter('tier1',this)">Tier 1</button>
+    <button class="chip" onclick="setFilter('tier2',this)">Tier 2</button>
+    <button class="chip" onclick="setFilter('attention',this)">⚠ Attention</button>
+    <button class="chip" onclick="setFilter('noplan',this)">No Plan</button>
+    <div style="margin-left:auto;display:flex;gap:6px;align-items:center;">
+      <span style="font-size:11px;color:var(--text-muted)">Sort:</span>
+      <select class="sort-select" onchange="sortAccounts(this.value)">
+        <option value="rag">Health</option>
+        <option value="target">Plan Target</option>
+        <option value="name">Account Name</option>
+        <option value="updated">Last Updated</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th style="width:220px">Account</th>
+          <th>Tier</th>
+          <th>Plan</th>
+          <th>Health</th>
+          <th>Requires Attention</th>
+          <th>Progress</th>
+          <th>Target (Mid)</th>
+          <th>Last Updated</th>
+          <th style="width:150px"></th>
+        </tr>
+      </thead>
+      <tbody id="tblBody"></tbody>
+    </table>
+  </div>
+
+</main>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+
+<!-- PLAN PANEL -->
+<div class="panel" id="panel">
+  <div class="p-hdr">
+    <button class="p-close" onclick="closePanel()">✕</button>
+    <div>
+      <div class="p-acc-name" id="pAccName">—</div>
+      <div class="p-acc-meta" id="pAccMeta">—</div>
+    </div>
+    <div class="p-tabs">
+      <button class="p-tab on" onclick="switchTab('view',this)">Account Plan</button>
+      <button class="p-tab" onclick="switchTab('create',this)">+ New Plan</button>
+      <button class="p-tab" onclick="switchTab('history',this)">History</button>
+    </div>
+    <div class="p-hdr-right">
+      <button class="btn btn-secondary" style="font-size:11px;padding:5px 10px">⬇ Export</button>
+      <button class="btn btn-primary" style="font-size:11px;padding:5px 10px" onclick="approvePlan()">✓ Approve Plan</button>
+    </div>
+  </div>
+
+  <div class="p-body">
+    <!-- LEFT -->
+    <div class="p-left" id="pLeft">
+      <div class="p-sec">
+        <div class="sec-lbl">Account Snapshot</div>
+        <div id="accSnapshot"></div>
+      </div>
+      <div class="p-sec">
+        <div class="sec-lbl">Strategic Assessment</div>
+        <div class="open-text" id="openText">—</div>
+      </div>
+      <div class="p-sec">
+        <div class="sec-lbl">Revenue Forecast</div>
+        <div class="rev-grid">
+          <div class="rev-cell"><div class="rev-lbl">Low</div><div class="rev-val lo" id="revLo">—</div></div>
+          <div class="rev-cell"><div class="rev-lbl">Target</div><div class="rev-val md" id="revMd">—</div></div>
+          <div class="rev-cell"><div class="rev-lbl">High</div><div class="rev-val hi" id="revHi">—</div></div>
+        </div>
+        <div class="fc-text" id="fcText">—</div>
+      </div>
+      <div class="p-sec">
+        <div class="sec-lbl">Positive Signals</div>
+        <div id="posSigs"></div>
+      </div>
+      <div class="p-sec">
+        <div class="sec-lbl">Watchouts</div>
+        <div id="watchouts"></div>
+      </div>
+      <div class="p-sec">
+        <div class="sec-lbl">Data Limitations</div>
+        <div id="dataLims"></div>
+      </div>
+    </div>
+
+    <!-- MIDDLE -->
+    <div class="p-mid" id="pMid"></div>
+
+    <!-- RIGHT - CHAT -->
+    <div class="p-right">
+      <div class="chat-hdr">
+        <div>
+          <div class="chat-hdr-title">Copilot</div>
+          <div class="chat-hdr-sub">Refine this plan</div>
+        </div>
+        <div class="chat-status"></div>
+      </div>
+      <div class="chat-msgs" id="chatMsgs">
+        <div class="msg ai">
+          <div class="msg-bubble">Plan loaded. The Jebel Ali Port Agreement at Negotiation stage is the primary near-term revenue driver. Ask me anything or request changes.</div>
+          <div class="msg-time">Just now</div>
+        </div>
+      </div>
+      <div class="q-prompts">
+        <button class="q-btn" onclick="qprompt(this)">Why Jebel Ali first?</button>
+        <button class="q-btn" onclick="qprompt(this)">Finance risk?</button>
+        <button class="q-btn" onclick="qprompt(this)">Whitespace?</button>
+        <button class="q-btn" onclick="qprompt(this)">Add cadence</button>
+      </div>
+      <div class="chat-inp-area">
+        <div class="chat-inp-wrap">
+          <textarea class="chat-ta" id="chatTa" placeholder="Ask about this plan or request changes..." rows="2"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+          <button class="send-btn" onclick="sendChat()">↑</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATAVERSE API LAYER
+// When deployed as a D365 web resource, this calls the real API.
+// In standalone mode, it falls back to mock data.
+// ═══════════════════════════════════════════════════════════════
+
+const API = {
+  // Detect if running inside D365 (Xrm context available)
+  isD365: () => typeof Xrm !== 'undefined',
+
+  // Base URL for Dataverse Web API
+  base: () => {
+    if (API.isD365()) {
+      return `${Xrm.Utility.getGlobalContext().getClientUrl()}/api/data/v9.2`;
+    }
+    return null; // standalone mode
+  },
+
+  // GET request to Dataverse
+  async get(endpoint) {
+    if (!API.isD365()) return null;
+    const url = `${API.base()}/${endpoint}`;
+    const res = await fetch(url, {
+      headers: {
+        'OData-MaxVersion': '4.0',
+        'OData-Version': '4.0',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
+        'Prefer': 'odata.include-annotations="*"'
+      }
+    });
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    return res.json();
+  },
+
+  // POST to Dataverse (create record)
+  async post(entity, data) {
+    if (!API.isD365()) return null;
+    const res = await fetch(`${API.base()}/${entity}`, {
+      method: 'POST',
+      headers: {
+        'OData-MaxVersion': '4.0',
+        'OData-Version': '4.0',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8'
+      },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(`Create error: ${res.status}`);
+    // Return the ID from the OData-EntityId header
+    const location = res.headers.get('OData-EntityId');
+    const match = location && location.match(/\(([^)]+)\)/);
+    return match ? match[1] : null;
+  },
+
+  // PATCH to Dataverse (update record)
+  async patch(entity, id, data) {
+    if (!API.isD365()) return null;
+    await fetch(`${API.base()}/${entity}(${id})`, {
+      method: 'PATCH',
+      headers: {
+        'OData-MaxVersion': '4.0',
+        'OData-Version': '4.0',
+        'Content-Type': 'application/json; charset=utf-8',
+        'If-Match': '*'
+      },
+      body: JSON.stringify(data)
+    });
+  },
+
+  // ── QUERY: Get account plans with account details ──────────
+  // Maps to: wrl_accountplans joined to accounts
+  // Account fields used: name, wrl_accounttier, wrl_ragstatus,
+  //   wrl_planstatus, wrl_requiresattention, wrl_plantarget,
+  //   wrl_actualrevenueytd, wrl_planprogress, wrl_relationshipscore
+  async getAccountPlans(ownerEmail) {
+    const select = [
+      'wrl_accountplanid','wrl_planname','wrl_planstatus','wrl_plantype',
+      'wrl_planintent','wrl_revenuetarget','wrl_actualrevenue',
+      'wrl_healthsummary','wrl_aiopeningstatement','wrl_growthobjectives',
+      'wrl_planpayload','wrl_generatedtimestamp','wrl_confirmationtimestamp',
+      '_wrl_account_value'
+    ].join(',');
+    const expand = `wrl_account($select=name,accountid,wrl_accounttier,wrl_ragstatus,wrl_planstatus,wrl_requiresattention,wrl_plantarget,wrl_actualrevenueytd,wrl_planprogress,wrl_relationshipscore,industrycode,revenue)`;
+    const filter = ownerEmail ? `wrl_planowneremail eq '${ownerEmail}'` : '';
+    const query = filter
+      ? `wrl_accountplans?$select=${select}&$expand=${expand}&$filter=${filter}&$orderby=modifiedon desc`
+      : `wrl_accountplans?$select=${select}&$expand=${expand}&$orderby=modifiedon desc`;
+    return API.get(query);
+  },
+
+  // ── QUERY: Get child records for a plan ───────────────────
+  // Cadences: wrl_engagementcadences filtered by _wrl_accountplan_value
+  async getCadences(planId) {
+    return API.get(`wrl_engagementcadences?$filter=_wrl_AccountPlan_value eq '${planId}'&$select=wrl_engagementcadenceid,wrl_cadencename,wrl_contactname,wrl_frequency,wrl_communicationchannel,wrl_purpose,wrl_rationale,wrl_locationawareness,wrl_status`);
+  },
+
+  // Actions: wrl_actionplans filtered by _wrl_accountplan_value
+  async getActions(planId) {
+    return API.get(`wrl_actionplans?$filter=_wrl_AccountPlan_value eq '${planId}'&$select=wrl_actionplanid,wrl_actiondescription,wrl_prioritylevel,wrl_communicationchannel,wrl_suggestedtiming,wrl_rationale,wrl_currentstatus`);
+  },
+
+  // Recommendations: wrl_planrecommendations filtered by _wrl_accountplan_value
+  async getRecommendations(planId) {
+    return API.get(`wrl_planrecommendations?$filter=_wrl_AccountPlan_value eq '${planId}'&$select=wrl_planrecommendationid,wrl_productname,wrl_recommendationtype,wrl_description,wrl_rationale,wrl_estimatedvalue,wrl_confidence,wrl_confidencereason,wrl_sortorder&$orderby=wrl_sortorder asc`);
+  },
+
+  // Conversation: wrl_conversationmessages filtered by _wrl_accountplan_value
+  async getMessages(planId) {
+    return API.get(`wrl_conversationmessages?$filter=_wrl_AccountPlan_value eq '${planId}'&$select=wrl_conversationmessageid,wrl_messagecontent,wrl_userrole,wrl_messagetimestamp,wrl_messagesequence&$orderby=wrl_messagesequence asc`);
+  },
+
+  // ── WRITE: Save full plan payload back to Dataverse ───────
+  // Stores the raw JSON in wrl_planpayload for full fidelity,
+  // plus maps key fields to structured columns for reporting
+  async savePlan(planId, planJson, accountId) {
+    const payload = {
+      wrl_planpayload: JSON.stringify(planJson),
+      wrl_healthsummary: planJson.healthSummary,
+      wrl_aiopeningstatement: planJson.openingStatement,
+      wrl_growthobjectives: planJson.growthObjectives,
+      wrl_revenuetarget: planJson.revenueTarget,
+      wrl_planstatus: 1, // Draft
+      wrl_generatedtimestamp: new Date().toISOString()
+    };
+    if (planId) {
+      // Update existing
+      await API.patch('wrl_accountplans', planId, payload);
+      return planId;
+    } else {
+      // Create new — link to account
+      payload['wrl_Account@odata.bind'] = `/accounts(${accountId})`;
+      payload['wrl_planname'] = `Account Plan — ${new Date().toLocaleDateString('en-GB')}`;
+      payload['wrl_plantype'] = 1; // Cross-sell
+      return API.post('wrl_accountplans', payload);
+    }
+  },
+
+  // Write cadences
+  async saveCadences(planId, cadences) {
+    for (const c of cadences) {
+      await API.post('wrl_engagementcadences', {
+        wrl_cadencename: c.name,
+        wrl_contactname: c.contactTitle,
+        wrl_frequency: mapFrequency(c.frequency),
+        wrl_communicationchannel: mapChannel(c.channel),
+        wrl_purpose: c.purpose,
+        wrl_rationale: c.rationale,
+        wrl_locationawareness: c.locationAware,
+        'wrl_AccountPlan@odata.bind': `/wrl_accountplans(${planId})`
+      });
+    }
+  },
+
+  // Write actions
+  async saveActions(planId, actions) {
+    for (const a of actions) {
+      await API.post('wrl_actionplans', {
+        wrl_actiondescription: a.description,
+        wrl_prioritylevel: mapPriority(a.priority),
+        wrl_communicationchannel: mapChannel(a.channel),
+        wrl_suggestedtiming: a.suggestedTiming,
+        wrl_rationale: a.rationale,
+        'wrl_AccountPlan@odata.bind': `/wrl_accountplans(${planId})`
+      });
+    }
+  },
+
+  // Write recommendations
+  async saveRecommendations(planId, recs) {
+    for (let i = 0; i < recs.length; i++) {
+      const r = recs[i];
+      await API.post('wrl_planrecommendations', {
+        wrl_productname: r.productName || r.type,
+        wrl_recommendationtype: mapRecType(r.type),
+        wrl_description: r.description,
+        wrl_rationale: r.rationale,
+        wrl_estimatedvalue: r.estimatedValue,
+        wrl_confidence: mapConfidence(r.confidence),
+        wrl_confidencereason: r.confidenceReason,
+        wrl_sortorder: i + 1,
+        'wrl_AccountPlan@odata.bind': `/wrl_accountplans(${planId})`
+      });
+    }
+  },
+
+  // Save chat message
+  async saveMessage(planId, content, role, sequence) {
+    await API.post('wrl_conversationmessages', {
+      wrl_messagecontent: content,
+      wrl_userrole: role === 'user' ? 1 : 2,
+      wrl_messagetimestamp: new Date().toISOString(),
+      wrl_messagesequence: sequence,
+      'wrl_AccountPlan@odata.bind': `/wrl_accountplans(${planId})`
+    });
+  }
+};
+
+// Choice field mappers — match your D365 option set values
+function mapFrequency(f) { return { weekly:1, biweekly:2, monthly:3, quarterly:4 }[f] || 3; }
+function mapChannel(c)   { return { phone:1, 'online-meeting':2, 'in-person':3, email:4, other:5 }[c] || 2; }
+function mapPriority(p)  { return { high:1, medium:2, low:3 }[p] || 2; }
+function mapRecType(t)   { return { 'cross-sell':1, upsell:2, retention:3, relationship:4 }[t] || 1; }
+function mapConfidence(c){ return { high:1, medium:2, low:3 }[c] || 2; }
+
+// ═══════════════════════════════════════════════════════════════
+// MOCK DATA (used when not in D365 context)
+// ═══════════════════════════════════════════════════════════════
+
+const MOCK_ACCOUNTS = [
+  { id:'ACC-001', name:'Apple Global Logistics', industry:'Consumer Electronics', tier:1, planStatus:'active', rag:'amber', attention:{level:'amber',text:'Finance Controller disengaged since Nov 2025'}, progress:45, target:1761500, achieved:792675, lastUpdated:'Today' },
+  { id:'ACC-002', name:'DP World Ports & Logistics', industry:'Global Trade & Logistics', tier:1, planStatus:'active', rag:'green', attention:{level:'none',text:'On track'}, progress:68, target:4200000, achieved:2856000, lastUpdated:'2 days ago' },
+  { id:'ACC-003', name:'Gulf Maritime Holdings', industry:'Maritime Logistics', tier:1, planStatus:'active', rag:'red', attention:{level:'red',text:'Legal Counsel disengaged — contract blocked'}, progress:22, target:881000, achieved:193820, lastUpdated:'3 days ago' },
+  { id:'ACC-004', name:'NorthStar Retail Group', industry:'Retail', tier:1, planStatus:'active', rag:'green', attention:{level:'none',text:'On track'}, progress:71, target:57000, achieved:40470, lastUpdated:'1 week ago' },
+  { id:'ACC-005', name:'Meridian Financial Services', industry:'Financial Services', tier:2, planStatus:'active', rag:'amber', attention:{level:'amber',text:'Procurement approval pending 3 weeks'}, progress:38, target:97250, achieved:36955, lastUpdated:'4 days ago' },
+  { id:'ACC-006', name:'Stormfield Energy', industry:'Energy', tier:1, planStatus:'active', rag:'red', attention:{level:'red',text:'Negotiation stalled — no activity 6 weeks'}, progress:15, target:232250, achieved:34838, lastUpdated:'2 weeks ago' },
+  { id:'ACC-007', name:'Vertex Manufacturing Ltd', industry:'Industrial Manufacturing', tier:2, planStatus:'draft', rag:'amber', attention:{level:'amber',text:'Discovery plan only — no pipeline yet'}, progress:0, target:0, achieved:0, lastUpdated:'5 days ago' },
+  { id:'ACC-008', name:'Redstone Pharma Ltd', industry:'Pharmaceuticals', tier:2, planStatus:'none', rag:'amber', attention:{level:'amber',text:'No plan — single contact only'}, progress:0, target:0, achieved:0, lastUpdated:'Never' }
+];
+
+const MOCK_PLAN = {
+  openingStatement: "The Jebel Ali Port Premium Berthing and Terminal Services Agreement reached Negotiation stage on 2026-02-13, and the operations team submitted a formal warehousing proposal request on 2026-01-24 — two signals indicating active decision-making on the ground. With the VP Global Supply Chain engaged in an account expansion review on 2026-02-19 and container tracking product pages visited on 2026-02-15, this is the right moment to consolidate the expansion narrative across Contract Logistics and Digital Supply Chain tools.",
+  healthSummary: "Account health is strong with a relationship score of 81, confirmed freight renewals, and high engagement across five of six senior contacts. Finance Controller disengagement since November 2025 is the primary risk to pipeline progression.",
+  positiveSignals: [
+    "Freight Forwarding — Asia to Middle East renewal confirmed on 2026-01-05.",
+    "Asia to Middle East shipment volume increased 19% Q4 2025 vs Q3 2025.",
+    "Operations team submitted warehousing proposal request for Dubai on 2026-01-24.",
+    "Digital team requested bundled pricing for container tracking, alerting, and analytics on 2026-02-08.",
+    "VP Global Supply Chain engaged in global account expansion review on 2026-02-19."
+  ],
+  watchouts: [
+    "Finance Controller Sophia Martinez has had no engagement since 2025-11-22, despite £3.84M in open pipeline. Budget approval for any of the seven active opportunities may stall without her involvement.",
+    "Europe Spare Parts Warehousing remains in Discovery with no activity since 2026-02-03 — progression risk.",
+    "Control Tower Dashboard in Discovery with no follow-up since the 2026-02-10 demo."
+  ],
+  contactEngagement: [
+    { name:"Laura Chen", title:"Global Director of Logistics", engagementLevel:"High", lastActivity:"2026-02-18", planRole:"primary-relationship", hasCadence:true, strategicNote:"Primary strategic relationship anchor across all seven opportunities. Most senior contact with highest engagement and most recent activity." },
+    { name:"Michael O'Connor", title:"VP Global Supply Chain", engagementLevel:"Medium", lastActivity:"2026-02-19", planRole:"opportunity-owner", hasCadence:true, strategicNote:"Participated in global account expansion review on 2026-02-19 — most recent activity in the dataset. Key decision-maker for supply chain transformation." },
+    { name:"Ravi Menon", title:"Regional Operations Director – Middle East", engagementLevel:"High", lastActivity:"2026-02-14", planRole:"opportunity-owner", hasCadence:true, strategicNote:"Primary owner of Dubai RDC and Jebel Ali opportunities. High engagement with port commercial review on 2026-02-14." },
+    { name:"Elena Fischer", title:"Director of Distribution Operations – Europe", engagementLevel:"High", lastActivity:"2026-02-11", planRole:"opportunity-owner", hasCadence:false, strategicNote:"Owns Europe Spare Parts Warehousing opportunity. Downloaded relevant whitepaper on 2026-02-04 and expressed interest in spare parts storage on 2026-02-11." },
+    { name:"Daniel Brooks", title:"Head of Logistics Technology", engagementLevel:"High", lastActivity:"2026-02-16", planRole:"opportunity-owner", hasCadence:false, strategicNote:"Owns Supply Chain Visibility Platform and Digital Exception Alerting opportunities. Attended supply chain visibility webinar on 2026-01-30." },
+    { name:"Sophia Martinez", title:"Finance Controller – Global Logistics", engagementLevel:"Low", lastActivity:"2025-11-22", planRole:"approval-risk", hasCadence:false, strategicNote:"Controls budget approval for all seven pipeline opportunities. Disengaged since November 2025 — single highest risk to pipeline progression." }
+  ],
+  revenuePicture: { pipelineValue:3840000, totalLow:612000, totalMid:1761500, totalHigh:3840000 },
+  revenueTarget: 1761500,
+  forecastNarrative: "The Jebel Ali Port Agreement at £720,000 in Negotiation provides the revenue floor at 85% confidence (£612,000). Propose stage opportunities add weighted contributions at 65%. Discovery and Qualify stage deals contribute at lower confidence. The high scenario requires Finance Controller re-engagement to unblock approvals across all seven deals.",
+  recommendations: [
+    { type:"cross-sell", productName:"Jebel Ali Port Premium Berthing and Terminal Services", description:"Close the Negotiation-stage Jebel Ali Port agreement — the highest-stage and nearest-to-close opportunity in the account.", rationale:"Commercial review completed on 2026-02-13 with Ravi Menon and close date is 2026-07-15. This is the primary near-term revenue driver at 85% confidence.", estimatedValue:720000, confidence:"high", confidenceReason:"Negotiation stage with recent commercial review on 2026-02-13." },
+    { type:"cross-sell", productName:"Digital Supply Chain Bundle", description:"Progress the Supply Chain Visibility Platform and Digital Exception Alerting as a bundled solution.", rationale:"Digital team requested bundled pricing on 2026-02-08 and logistics technology team visited product pages on 2026-02-15. Both in Propose stage.", estimatedValue:430000, confidence:"medium", confidenceReason:"Propose stage with strong engagement signals but Finance Controller approval pending." },
+    { type:"cross-sell", productName:"Dubai Regional Distribution Centre", description:"Advance the Dubai RDC Contract Logistics opportunity from Qualify to Propose.", rationale:"Operations team submitted formal warehousing proposal request on 2026-01-24 and discovery workshop completed on 2026-01-20 with Ravi Menon.", estimatedValue:380000, confidence:"medium", confidenceReason:"Qualify stage with validated interest and strong regional engagement." }
+  ],
+  cadences: [
+    { name:"Strategic Expansion Review — Global Director of Logistics", contactTitle:"Global Director of Logistics", contactName:"Laura Chen", frequency:"monthly", channel:"online-meeting", locationAware:true, purpose:"Maintain executive alignment across all seven pipeline opportunities.", rationale:"Laura Chen is the primary relationship contact with High engagement and most recent activity on 2026-02-18. Remote in Singapore." },
+    { name:"Jebel Ali Negotiation Closure — Regional Operations Director", contactTitle:"Regional Operations Director – Middle East", contactName:"Ravi Menon", frequency:"biweekly", channel:"in-person", locationAware:true, purpose:"Drive the Jebel Ali Port agreement to signature.", rationale:"Ravi Menon has High engagement with last activity on 2026-02-14. In-person in Dubai appropriate given Negotiation stage urgency." },
+    { name:"Finance Controller Re-engagement — Budget Approval", contactTitle:"Finance Controller – Global Logistics", contactName:"Sophia Martinez", frequency:"monthly", channel:"online-meeting", locationAware:true, purpose:"Re-establish engagement and secure budget visibility for all open opportunities.", rationale:"Sophia Martinez disengaged since 2025-11-22. Monthly online meeting as light-touch re-engagement. Remote in Austin." }
+  ],
+  oneOffActions: [
+    { description:"Send Finance Controller Sophia Martinez a consolidated financial summary covering all seven open opportunities and their combined approval requirements.", channel:"email", priority:"high", suggestedTiming:"Within 1 week" },
+    { description:"Submit a formal proposal for the Digital Supply Chain bundle to Daniel Brooks following the 2026-02-08 pricing request.", channel:"online-meeting", priority:"high", suggestedTiming:"Within 2 weeks" },
+    { description:"Follow up with Elena Fischer on Europe Spare Parts Warehousing requirements from the 2026-02-03 discussion.", channel:"online-meeting", priority:"medium", suggestedTiming:"Within 2 weeks" },
+    { description:"Schedule a Control Tower Dashboard use-case refinement session with the APAC operations team.", channel:"online-meeting", priority:"low", suggestedTiming:"2026-03-15" }
+  ],
+  dataLimitations: [
+    "Finance Controller Sophia Martinez has had no engagement since 2025-11-22 — budget approval timeline for all seven opportunities is unknown.",
+    "No pricing confirmation or budget signals available despite Negotiation and Propose stage opportunities.",
+    "Europe Spare Parts Warehousing and Control Tower Dashboard have had no follow-up activity — qualification status is unclear."
+  ]
+};
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let allAccounts = [];
+let currentFilter = 'all';
+let currentSearch = '';
+let msgCount = 1;
+let currentPlanId = null;
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+async function init() {
+  if (API.isD365()) {
+    document.getElementById('apiNotice').style.display = 'none';
+    try {
+      const currentUser = Xrm.Utility.getGlobalContext().getUserName();
+      const data = await API.getAccountPlans();
+      allAccounts = transformD365Data(data.value || []);
+    } catch(e) {
+      console.error('D365 load error:', e);
+      allAccounts = MOCK_ACCOUNTS;
+    }
+  } else {
+    allAccounts = MOCK_ACCOUNTS;
+  }
+  renderSummary();
+  renderTable();
+  document.getElementById('pgSub').textContent = `Q1 2026 · ${allAccounts.length} accounts · ${API.isD365() ? 'Live from Dataverse' : 'Mock data'}`;
+}
+
+// Transform D365 API response to our display format
+function transformD365Data(records) {
+  return records.map(r => ({
+    id: r.wrl_accountplanid,
+    accountId: r._wrl_account_value,
+    name: r['wrl_account/name'] || r._wrl_account_value_Formatted || 'Unknown',
+    industry: r['wrl_account/industrycode@OData.Community.Display.V1.FormattedValue'] || '—',
+    tier: r['wrl_account/wrl_accounttier'] || 2,
+    planStatus: mapPlanStatus(r.wrl_planstatus),
+    rag: mapRAG(r['wrl_account/wrl_ragstatus']),
+    attention: { level: mapAttLevel(r['wrl_account/wrl_ragstatus']), text: r['wrl_account/wrl_requiresattention'] || 'On track' },
+    progress: r['wrl_account/wrl_planprogress'] || 0,
+    target: r['wrl_account/wrl_plantarget'] || r.wrl_revenuetarget || 0,
+    achieved: r['wrl_account/wrl_actualrevenueytd'] || r.wrl_actualrevenue || 0,
+    lastUpdated: r.modifiedon ? new Date(r.modifiedon).toLocaleDateString('en-GB') : '—',
+    planPayload: r.wrl_planpayload ? JSON.parse(r.wrl_planpayload) : null,
+    rawPlan: r
+  }));
+}
+function mapPlanStatus(v) { return {1:'active',2:'draft',3:'none'}[v] || 'none'; }
+function mapRAG(v) { return {1:'green',2:'amber',3:'red'}[v] || 'amber'; }
+function mapAttLevel(v) { return {1:'none',2:'amber',3:'red'}[v] || 'amber'; }
+
+// ═══════════════════════════════════════════════════════════════
+// SUMMARY CARDS
+// ═══════════════════════════════════════════════════════════════
+function renderSummary() {
+  const active = allAccounts.filter(a => a.planStatus === 'active').length;
+  const total = allAccounts.filter(a => a.planStatus !== 'none').length;
+  const target = allAccounts.reduce((s,a) => s + (a.target||0), 0);
+  const achieved = allAccounts.reduce((s,a) => s + (a.achieved||0), 0);
+  const attention = allAccounts.filter(a => a.attention.level !== 'none').length;
+
+  document.getElementById('cActive').textContent = active;
+  document.getElementById('cActiveSub').textContent = `${total} total plans`;
+  document.getElementById('cTarget').textContent = fmt(target);
+  document.getElementById('cAchieved').textContent = fmt(achieved);
+  const pct = target > 0 ? Math.round(achieved/target*100) : 0;
+  document.getElementById('cAchievedSub').textContent = `${pct}% of combined target`;
+  document.getElementById('cAttention').textContent = attention;
+  document.getElementById('cCadences').textContent = '5'; // Would come from cadence query in D365
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TABLE
+// ═══════════════════════════════════════════════════════════════
+function renderTable() {
+  let data = [...allAccounts];
+  if (currentSearch) data = data.filter(a => a.name.toLowerCase().includes(currentSearch.toLowerCase()) || a.industry.toLowerCase().includes(currentSearch.toLowerCase()));
+  if (currentFilter === 'tier1') data = data.filter(a => a.tier === 1);
+  else if (currentFilter === 'tier2') data = data.filter(a => a.tier === 2);
+  else if (currentFilter === 'attention') data = data.filter(a => a.attention.level !== 'none');
+  else if (currentFilter === 'noplan') data = data.filter(a => a.planStatus === 'none');
+
+  const AV_COLORS = ['#0e1e35','#162844','#1c3455','#0d9488','#2463eb','#15803d','#b45309','#0e1e35'];
+
+  document.getElementById('tblBody').innerHTML = data.map((acc, i) => {
+    const ragCls = {green:'rag-g',amber:'rag-a',red:'rag-r'}[acc.rag];
+    const ragLbl = {green:'Healthy',amber:'Monitor',red:'At Risk'}[acc.rag];
+    const tierCls = `t${acc.tier}`;
+    const planCls = {active:'st-active',draft:'st-draft',none:'st-none'}[acc.planStatus];
+    const planLbl = {active:'● Active',draft:'◐ Draft',none:'○ No Plan'}[acc.planStatus];
+    const attCls = {red:'att-r',amber:'att-a',none:'att-n'}[acc.attention.level];
+    const pct = Math.min(acc.progress, 100);
+    const fillCls = acc.progress >= 100 ? 'done' : '';
+    const avColor = AV_COLORS[i % AV_COLORS.length];
+    const initials = acc.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    const progressPct = acc.target > 0 ? Math.round(acc.achieved/acc.target*100) : 0;
+
+    return `<tr onclick="openAccount('${acc.id}')">
+      <td><div class="acc-cell">
+        <div class="acc-av" style="background:${avColor}">${initials}</div>
+        <div><div class="acc-name">${acc.name}</div><div class="acc-ind">${acc.industry}</div></div>
+      </div></td>
+      <td><span class="tier ${tierCls}">T${acc.tier}</span></td>
+      <td><span class="plan-st ${planCls}">${planLbl}</span></td>
+      <td><span class="rag ${ragCls}">${ragLbl}</span></td>
+      <td><span class="att ${attCls}" title="${acc.attention.text}">${acc.attention.text}</span></td>
+      <td><div class="prog-wrap">
+        <div class="prog-bg"><div class="prog-fill ${fillCls}" style="width:${progressPct}%"></div></div>
+        <span class="prog-pct">${progressPct}%</span>
+      </div></td>
+      <td style="font-size:12px;font-weight:600;font-family:var(--mono);color:var(--text-mid)">${fmt(acc.target)}</td>
+      <td style="font-size:11px;color:var(--text-muted)">${acc.lastUpdated}</td>
+      <td onclick="event.stopPropagation()"><div class="row-acts">
+        ${acc.planStatus !== 'none'
+          ? `<button class="row-btn pri" onclick="openAccount('${acc.id}')">View Plan</button>`
+          : `<button class="row-btn pri" onclick="openCreatePanel('${acc.id}')">Create Plan</button>`}
+        <button class="row-btn" onclick="openAccount('${acc.id}')">Edit</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterAccounts(v) { currentSearch = v; renderTable(); }
+function setFilter(f, el) { currentFilter = f; document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on')); el.classList.add('on'); renderTable(); }
+function sortAccounts(v) {
+  const order = {green:0,amber:1,red:2};
+  if (v==='rag') allAccounts.sort((a,b)=>(order[a.rag]||1)-(order[b.rag]||1));
+  else if (v==='target') allAccounts.sort((a,b)=>(b.target||0)-(a.target||0));
+  else if (v==='name') allAccounts.sort((a,b)=>a.name.localeCompare(b.name));
+  renderTable();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL
+// ═══════════════════════════════════════════════════════════════
+async function openAccount(id) {
+  const acc = allAccounts.find(a => a.id === id) || allAccounts[0];
+  document.getElementById('pAccName').textContent = acc.name;
+  document.getElementById('pAccMeta').textContent = `Tier ${acc.tier} · ${acc.industry}`;
+  document.getElementById('overlay').classList.add('on');
+  document.getElementById('panel').classList.add('on');
+  currentPlanId = id;
+
+  // Use plan payload if available (D365), else mock data
+  let plan = MOCK_PLAN;
+  if (API.isD365() && acc.rawPlan) {
+    if (acc.planPayload) {
+      plan = acc.planPayload;
+    } else {
+      // Load child records and build plan object
+      try {
+        const [cads, acts, recs] = await Promise.all([
+          API.getCadences(id), API.getActions(id), API.getRecommendations(id)
+        ]);
+        plan = buildPlanFromD365(acc.rawPlan, cads?.value, acts?.value, recs?.value);
+      } catch(e) { console.error('Load plan error:', e); }
+    }
+  }
+  renderPlan(plan, acc);
+}
+
+function buildPlanFromD365(planRecord, cadences, actions, recs) {
+  return {
+    openingStatement: planRecord.wrl_aiopeningstatement || '—',
+    healthSummary: planRecord.wrl_healthsummary || '—',
+    growthObjectives: planRecord.wrl_growthobjectives || '—',
+    positiveSignals: [], watchouts: [], dataLimitations: [],
+    contactEngagement: [],
+    revenuePicture: { pipelineValue: 0, totalLow: 0, totalMid: planRecord.wrl_revenuetarget || 0, totalHigh: 0 },
+    revenueTarget: planRecord.wrl_revenuetarget || 0,
+    forecastNarrative: '—',
+    recommendations: (recs || []).map(r => ({
+      type: r['wrl_recommendationtype@OData.Community.Display.V1.FormattedValue'] || 'cross-sell',
+      productName: r.wrl_productname,
+      description: r.wrl_description,
+      rationale: r.wrl_rationale,
+      estimatedValue: r.wrl_estimatedvalue,
+      confidence: r['wrl_confidence@OData.Community.Display.V1.FormattedValue'] || 'medium',
+      confidenceReason: r.wrl_confidencereason
+    })),
+    cadences: (cadences || []).map(c => ({
+      name: c.wrl_cadencename,
+      contactTitle: c.wrl_contactname,
+      contactName: c.wrl_contactname,
+      frequency: c['wrl_frequency@OData.Community.Display.V1.FormattedValue'] || 'monthly',
+      channel: c['wrl_communicationchannel@OData.Community.Display.V1.FormattedValue'] || 'online-meeting',
+      locationAware: c.wrl_locationawareness,
+      purpose: c.wrl_purpose,
+      rationale: c.wrl_rationale
+    })),
+    oneOffActions: (actions || []).map(a => ({
+      description: a.wrl_actiondescription,
+      priority: a['wrl_prioritylevel@OData.Community.Display.V1.FormattedValue'] || 'medium',
+      channel: a['wrl_communicationchannel@OData.Community.Display.V1.FormattedValue'] || 'email',
+      suggestedTiming: a.wrl_suggestedtiming
+    }))
+  };
+}
+
+function openCreatePanel(id) {
+  currentPlanId = id;
+  const acc = allAccounts.find(a => a.id === id) || allAccounts[0];
+  document.getElementById('pAccName').textContent = acc?.name || 'New Account Plan';
+  document.getElementById('pAccMeta').textContent = `Tier ${acc?.tier || 1} · ${acc?.industry || '—'}`;
+  document.getElementById('overlay').classList.add('on');
+  document.getElementById('panel').classList.add('on');
+  document.querySelectorAll('.p-tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.p-tab')[1].classList.add('on');
+  renderCreateMode();
+}
+
+function closePanel() {
+  document.getElementById('overlay').classList.remove('on');
+  document.getElementById('panel').classList.remove('on');
+}
+
+function switchTab(tab, el) {
+  document.querySelectorAll('.p-tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  if (tab==='view') openAccount(currentPlanId);
+  else if (tab==='create') renderCreateMode();
+  else if (tab==='history') renderHistory();
+}
+
+async function approvePlan() {
+  if (API.isD365() && currentPlanId) {
+    await API.patch('wrl_accountplans', currentPlanId, {
+      wrl_planstatus: 3, // Active
+      wrl_confirmationtimestamp: new Date().toISOString()
+    });
+  }
+  addMsg('ai', 'Plan approved and saved to Dataverse. Cadences and actions are now active.');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER PLAN
+// ═══════════════════════════════════════════════════════════════
+const CHAN_ICON = {'online-meeting':'🖥','in-person':'🤝',phone:'📞',email:'✉',other:'📋'};
+const ROLE_CFG = {
+  'primary-relationship':{lbl:'Primary',cls:'rb-primary'},
+  'opportunity-owner':{lbl:'Opp. Owner',cls:'rb-owner'},
+  'approval-risk':{lbl:'⚠ Risk',cls:'rb-risk'},
+  'low-priority':{lbl:'Low Priority',cls:'rb-low'},
+  'no-data':{lbl:'No Data',cls:'rb-low'}
+};
+const ENG_CLS = {High:'eb-h',Medium:'eb-m',Low:'eb-l',Unknown:'eb-u'};
+
+function renderPlan(plan, acc) {
+  document.getElementById('pLeft').style.display = 'flex';
+
+  // Account snapshot
+  const rs = acc?.relationshipScore || 81;
+  document.getElementById('accSnapshot').innerHTML = `
+    <div class="stat-row"><span class="stat-k">Annual Revenue</span><span class="stat-v blue">${fmt(acc?.annualRevenue||6200000)}</span></div>
+    <div class="stat-row"><span class="stat-k">Relationship Score</span><span class="stat-v">${rs} / 100</span></div>
+    <div class="rel-bar"><div class="rel-fill" style="width:${rs}%"></div></div>
+    <div class="stat-row" style="margin-top:7px"><span class="stat-k">Pipeline Total</span><span class="stat-v blue">${fmt(plan.revenuePicture?.pipelineValue||0)}</span></div>
+    <div class="stat-row"><span class="stat-k">Open Opportunities</span><span class="stat-v">7</span></div>`;
+
+  document.getElementById('openText').textContent = plan.openingStatement || '—';
+  document.getElementById('revLo').textContent = fmt(plan.revenuePicture?.totalLow);
+  document.getElementById('revMd').textContent = fmt(plan.revenuePicture?.totalMid);
+  document.getElementById('revHi').textContent = fmt(plan.revenuePicture?.totalHigh);
+  document.getElementById('fcText').textContent = plan.forecastNarrative || '—';
+  document.getElementById('posSigs').innerHTML = (plan.positiveSignals||[]).map(s=>`<div class="sig-item"><div class="sig-dot"></div><div class="sig-text">${s}</div></div>`).join('');
+  document.getElementById('watchouts').innerHTML = (plan.watchouts||[]).map(w=>`<div class="wo-item">${w}</div>`).join('');
+  document.getElementById('dataLims').innerHTML = (plan.dataLimitations||[]).map(l=>`<div class="lim-item"><span style="flex-shrink:0;margin-top:1px">ℹ</span>${l}</div>`).join('');
+
+  const initials = n => n ? n.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase() : '?';
+
+  // Coverage gap warning
+  const atRisk = (plan.contactEngagement||[]).filter(c=>c.planRole==='approval-risk'&&!c.hasCadence);
+  const gapHtml = atRisk.length ? `<div class="gap-warn"><span>⚠</span><span><strong>Coverage gap:</strong> ${atRisk.map(c=>c.name).join(', ')} flagged as approval risk with no cadence. Ask the copilot to add a re-engagement cadence.</span></div>` : '';
+
+  document.getElementById('pMid').innerHTML = `
+    <div class="m-sec">
+      <div class="m-hdr"><span class="m-title">Contact Engagement</span><span class="m-count">${(plan.contactEngagement||[]).length} contacts</span></div>
+      ${gapHtml}
+      ${(plan.contactEngagement||[]).map(c=>{
+        const rc = ROLE_CFG[c.planRole]||ROLE_CFG['low-priority'];
+        const rowCls = c.planRole==='primary-relationship'?'c-primary':c.planRole==='approval-risk'?'c-risk':'';
+        return `<div class="c-row ${rowCls}">
+          <div class="c-av">${initials(c.name)}</div>
+          <div class="c-info">
+            <div class="c-name-row">
+              <span class="c-name">${c.name}</span>
+              <span class="role-b ${rc.cls}">${rc.lbl}</span>
+              ${c.hasCadence?'<span class="cad-tag">In Plan</span>':''}
+            </div>
+            <div class="c-title-txt">${c.title}</div>
+            <div class="c-meta">
+              <span class="eng-b ${ENG_CLS[c.engagementLevel]||'eb-u'}">${c.engagementLevel}</span>
+              <span class="c-act">Last: ${c.lastActivity||'No activity'}</span>
+            </div>
+            <div class="c-note">${c.strategicNote}</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="m-sec">
+      <div class="m-hdr"><span class="m-title">Recommendations</span><span class="m-count">${(plan.recommendations||[]).length}</span></div>
+      ${(plan.recommendations||[]).map((r,i)=>{
+        const cc = {high:'cb-h',medium:'cb-m',low:'cb-l'}[r.confidence]||'cb-m';
+        return `<div class="rec">
+          <div class="rec-hdr">
+            <div class="rec-num">${i+1}</div>
+            <div style="flex:1"><div class="rec-prod">${r.productName||r.type}</div><div class="rec-type">${r.type}</div></div>
+            <span class="conf-b ${cc}">${r.confidence}</span>
+          </div>
+          <div class="rec-val">${fmt(r.estimatedValue)}</div>
+          <div class="rec-desc">${r.description}</div>
+          <div class="rec-rat">${r.rationale}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="m-sec">
+      <div class="m-hdr"><span class="m-title">Engagement Cadences</span><span class="m-count">${(plan.cadences||[]).length}</span></div>
+      ${(plan.cadences||[]).map(c=>`
+        <div class="cad">
+          <div class="cad-icon">${CHAN_ICON[c.channel]||'📅'}</div>
+          <div style="flex:1">
+            <div class="cad-name">${c.name}</div>
+            <div class="cad-contact">${c.contactName||c.contactTitle}</div>
+            <div class="cad-chips">
+              <span class="cad-chip">${c.contactTitle}</span>
+              <span class="cad-chip">${c.frequency}</span>
+              <span class="cad-chip">${c.channel}</span>
+              ${c.locationAware?'<span class="cad-chip remote">Remote</span>':''}
+            </div>
+            <div class="cad-purp">${c.purpose}</div>
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="m-sec">
+      <div class="m-hdr"><span class="m-title">One-off Actions</span><span class="m-count">${(plan.oneOffActions||[]).length}</span></div>
+      ${(plan.oneOffActions||[]).map(a=>{
+        const pc = {high:'pb-h',medium:'pb-m',low:'pb-l'}[a.priority]||'pb-m';
+        return `<div class="act">
+          <span class="prio-b ${pc}">${a.priority}</span>
+          <div><div class="act-desc">${a.description}</div><div class="act-timing">${CHAN_ICON[a.channel]||''} ${a.channel} · ${a.suggestedTiming}</div></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CREATE MODE
+// ═══════════════════════════════════════════════════════════════
+function renderCreateMode() {
+  document.getElementById('pLeft').style.display = 'none';
+  document.getElementById('pMid').innerHTML = `
+    <div class="create-mode">
+      <div class="create-icon">◈</div>
+      <div class="create-title">Create Account Plan</div>
+      <div class="create-sub">Select a planning intent. The copilot will analyse your account data from Dataverse and generate a grounded strategic plan.</div>
+      <div class="intent-opts">
+        <div class="intent-opt on" onclick="selIntent(this)"><div class="intent-emoji">🔀</div><div><div class="intent-lbl">Cross-sell</div><div class="intent-desc">Expand into new products or services</div></div></div>
+        <div class="intent-opt" onclick="selIntent(this)"><div class="intent-emoji">⬆</div><div><div class="intent-lbl">Upsell</div><div class="intent-desc">Upgrade tier or increase usage</div></div></div>
+        <div class="intent-opt" onclick="selIntent(this)"><div class="intent-emoji">🔄</div><div><div class="intent-lbl">Retention</div><div class="intent-desc">Secure renewal and prevent churn</div></div></div>
+        <div class="intent-opt" onclick="selIntent(this)"><div class="intent-emoji">🤝</div><div><div class="intent-lbl">Relationship</div><div class="intent-desc">Strengthen executive engagement</div></div></div>
+      </div>
+      <button class="btn btn-primary" style="font-size:13px;padding:10px 28px" onclick="generatePlan()">Generate Plan →</button>
+    </div>`;
+}
+
+function selIntent(el) { document.querySelectorAll('.intent-opt').forEach(o=>o.classList.remove('on')); el.classList.add('on'); }
+
+function generatePlan() {
+  document.getElementById('pMid').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;padding:40px;">
+      <div class="spin"></div>
+      <div style="font-size:13px;color:var(--text-muted)">Collecting account data from Dataverse...</div>
+      <div style="font-size:11px;color:var(--slate-lt);text-align:center;max-width:260px">Reading opportunities, contacts, activities and signals. Calling the planning copilot.</div>
+    </div>`;
+  setTimeout(async () => {
+    document.getElementById('pLeft').style.display = 'flex';
+    document.querySelectorAll('.p-tab').forEach(t=>t.classList.remove('on'));
+    document.querySelectorAll('.p-tab')[0].classList.add('on');
+    const acc = allAccounts.find(a=>a.id===currentPlanId)||allAccounts[0];
+    renderPlan(MOCK_PLAN, acc);
+    // In D365: save the generated plan
+    if (API.isD365()) {
+      const newPlanId = await API.savePlan(null, MOCK_PLAN, acc.accountId);
+      if (newPlanId) {
+        await Promise.all([
+          API.saveCadences(newPlanId, MOCK_PLAN.cadences),
+          API.saveActions(newPlanId, MOCK_PLAN.oneOffActions),
+          API.saveRecommendations(newPlanId, MOCK_PLAN.recommendations)
+        ]);
+        currentPlanId = newPlanId;
+      }
+    }
+    addMsg('ai', 'Plan generated for this account. I identified 7 open opportunities with a combined pipeline of £3.84M. The Jebel Ali Port Agreement at Negotiation stage is your primary revenue driver. What would you like to refine?');
+  }, 2400);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════════════════
+function renderHistory() {
+  document.getElementById('pLeft').style.display = 'none';
+  document.getElementById('pMid').innerHTML = `
+    <div style="padding:20px;">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px">Plan History</div>
+      ${[
+        {v:'v3 — Current',d:'Today, 14:32',i:'Cross-sell',t:'£1.76M'},
+        {v:'v2',d:'2026-03-15, 09:14',i:'Cross-sell',t:'£1.62M'},
+        {v:'v1',d:'2026-02-28, 16:45',i:'Cross-sell',t:'£1.40M'}
+      ].map(h=>`
+        <div style="border:1px solid var(--border);border-radius:var(--r);padding:13px;margin-bottom:7px;background:white;display:flex;gap:12px;align-items:center;">
+          <div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--text)">${h.v}</div><div style="font-size:11px;color:var(--text-muted)">${h.d} · ${h.i} · Wahaj Rashid</div></div>
+          <div style="font-size:14px;font-weight:700;font-family:var(--mono);color:var(--blue)">${h.t}</div>
+          <button class="row-btn" onclick="openAccount(currentPlanId);document.querySelectorAll('.p-tab').forEach(t=>t.classList.remove('on'));document.querySelectorAll('.p-tab')[0].classList.add('on')">View</button>
+        </div>`).join('')}
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHAT
+// ═══════════════════════════════════════════════════════════════
+const RESPONSES = {
+  'why jebel ali first':'Jebel Ali Port Premium Berthing is in Negotiation stage — the highest pipeline stage in this account. At 85% confidence it contributes £612,000 to the revenue floor. Commercial terms were reviewed on 2026-02-13 and the close date is 2026-07-15. Stage always determines priority, not deal size.',
+  'finance risk':'Sophia Martinez has not engaged since 2025-11-22. With £3.84M in open pipeline across seven opportunities, her budget approval is required for all of them. She is flagged as approval-risk with no cadence — the coverage gap warning is showing for exactly this reason.',
+  'whitespace':'For this account, whitespace is zero. All identified expansion signals are already represented as open pipeline opportunities. Whitespace would only apply to products or geographies with signals not yet in the pipeline.',
+  'add cadence':'I can add a cadence for any contact. Who should it be with and what is the objective? For example: "Add a monthly online meeting cadence with Daniel Brooks to drive the Digital Supply Chain bundle."',
+  'default':'Noted. In the connected prototype, I would update the plan and re-render it here. Ask me anything specific about this plan or describe a change you want to make.'
+};
+
+function addMsg(role, text) {
+  const c = document.getElementById('chatMsgs');
+  const t = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  const d = document.createElement('div');
+  d.className = `msg ${role}`;
+  d.innerHTML = `<div class="msg-bubble">${text}</div><div class="msg-time">${t}</div>`;
+  c.appendChild(d);
+  c.scrollTop = c.scrollHeight;
+  if (API.isD365()) API.saveMessage(currentPlanId, text, role, msgCount++);
+}
+
+function qprompt(btn) {
+  const txt = btn.textContent;
+  addMsg('user', txt);
+  setTimeout(() => {
+    const k = txt.toLowerCase();
+    const match = Object.keys(RESPONSES).find(r=>r!=='default'&&k.includes(r));
+    addMsg('ai', match?RESPONSES[match]:RESPONSES['default']);
+  }, 700);
+}
+
+function sendChat() {
+  const ta = document.getElementById('chatTa');
+  const txt = ta.value.trim();
+  if (!txt) return;
+  addMsg('user', txt);
+  ta.value=''; ta.style.height='auto';
+  setTimeout(() => {
+    const k = txt.toLowerCase();
+    const match = Object.keys(RESPONSES).find(r=>r!=='default'&&k.includes(r));
+    addMsg('ai', match?RESPONSES[match]:RESPONSES['default']);
+  }, 800);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════
+function fmt(n) {
+  if (!n && n!==0) return '—';
+  if (n===0) return '£0';
+  if (n>=1000000) return '£'+(n/1000000).toFixed(1)+'M';
+  if (n>=1000) return '£'+Math.round(n/1000)+'K';
+  return '£'+n.toLocaleString();
+}
+
+// Auto-resize textarea
+document.addEventListener('DOMContentLoaded', () => {
+  const ta = document.getElementById('chatTa');
+  ta?.addEventListener('input', () => { ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,90)+'px'; });
+  init();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+{
+  "_meta": {
+    "title": "Conflicting Signals",
+    "description": "Account with mixed signals - strong revenue and executive engagement but rising support cases and overdue invoice. Tests whether the model sequences objectives correctly rather than ignoring risk.",
+    "tags": ["conflicting signals", "risk", "recovery"],
+    "difficulty": "complex"
+  },
+  "planIntent": "Build a cross-sell strategy for this customer.",
+  "planType": "cross-sell",
+  "account": {
+    "id": "ACC-002",
+    "name": "GlobalTrade Corp",
+    "industry": "Freight and Trade",
+    "region": "Manchester, UK",
+    "tier": "Tier 1",
+    "annualRevenue": 220000,
+    "relationshipScore": 38
+  },
+  "productsOwned": [
+    { "name": "Core CRM Platform", "startDate": "2021-07-01", "renewalDate": "2026-07-01", "value": 150000 },
+    { "name": "Integration Hub", "startDate": "2022-01-01", "renewalDate": "2026-07-01", "value": 70000 }
+  ],
+  "opportunities": [],
+  "contacts": [
+    { "name": "Sandra Okafor", "title": "CIO", "city": "Manchester", "lastActivity": "2025-10-05", "engagementLevel": "Low" },
+    { "name": "Tom Briggs", "title": "IT Manager", "city": "Manchester", "lastActivity": "2026-02-01", "engagementLevel": "Medium" }
+  ],
+  "activities": [
+    { "type": "Support Case", "subject": "Integration errors on order sync - P1", "date": "2026-01-10", "status": "Resolved" },
+    { "type": "Support Case", "subject": "Data export timeout - P2", "date": "2026-01-28", "status": "Open" },
+    { "type": "Support Case", "subject": "API authentication intermittent failure", "date": "2026-02-12", "status": "Open" },
+    { "type": "Email", "subject": "Escalation - service reliability concerns raised by CIO", "date": "2026-02-05", "status": "Completed" }
+  ],
+  "commercialSignals": [
+    { "type": "Invoice", "summary": "Invoice INV-3301 overdue by 32 days - no response to reminders", "date": "2026-01-01", "sentiment": "Negative" }
+  ],
+  "marketingSignals": [
+    { "type": "Email Open", "summary": "IT Manager opened competitor comparison email from industry newsletter", "date": "2026-02-10", "engagementLevel": "Medium" }
+  ],
+  "planHistory": [
+    { "planDate": "2025-07-01", "planStatus": "Closed", "summary": "Expansion plan - stalled after P1 incident in Q3" }
+  ]
+}

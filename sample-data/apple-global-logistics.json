@@ -1,0 +1,71 @@
+{
+  "_meta": {
+    "title": "Apple Global Logistics Strategic Expansion",
+    "description": "Tier 1 strategic account already using Freight Forwarding services across Asia, Middle East, and Europe. Strong operational engagement, active multi-threaded pipeline, and digital interest create a high-potential expansion scenario across Contract Logistics and Digital Supply Chain tools.",
+    "tags": ["expansion", "contract logistics", "digital tools", "Tier 1", "strategic account"],
+    "difficulty": "moderate"
+  },
+  "planIntent": "How can we expand our existing Freight Forwarding relationship into Contract Logistics and Digital Supply Chain tools for this account?",
+  "planType": "cross-sell",
+  "account": {
+    "id": "ACC-APPLE-STRAT-001",
+    "name": "Apple Global Logistics",
+    "industry": "Consumer Electronics Manufacturing",
+    "region": "Global",
+    "tier": "Tier 1 Strategic Account",
+    "annualRevenue": 6200000,
+    "relationshipScore": 81
+  },
+  "productsOwned": [
+    { "name": "Freight Forwarding – Asia to Middle East", "startDate": "2021-04-01", "renewalDate": "2026-04-01", "value": 2400000 },
+    { "name": "Freight Forwarding – Asia to Europe", "startDate": "2022-02-01", "renewalDate": "2026-02-01", "value": 1800000 },
+    { "name": "Multi-Modal Freight Forwarding – Sea + Road", "startDate": "2023-01-15", "renewalDate": "2026-01-15", "value": 950000 }
+  ],
+  "opportunities": [
+    { "name": "Dubai Regional Distribution Center – Contract Logistics", "stage": "Qualify", "value": 1400000, "closeDate": "2026-09-30", "status": "Open" },
+    { "name": "Europe Spare Parts Warehousing – Contract Logistics", "stage": "Discovery", "value": 850000, "closeDate": "2026-10-15", "status": "Open" },
+    { "name": "Supply Chain Visibility Platform – Global Container Tracking", "stage": "Propose", "value": 320000, "closeDate": "2026-06-30", "status": "Open" },
+    { "name": "Control Tower Dashboard – APAC Pilot", "stage": "Discovery", "value": 180000, "closeDate": "2026-07-31", "status": "Open" },
+    { "name": "Jebel Ali Port Premium Berthing and Terminal Services Agreement", "stage": "Negotiation", "value": 720000, "closeDate": "2026-07-15", "status": "Open" },
+    { "name": "Returns and Reverse Logistics Solution – UAE Market", "stage": "Qualify", "value": 260000, "closeDate": "2026-08-20", "status": "Open" },
+    { "name": "Digital Exception Alerting and ETA Notifications", "stage": "Propose", "value": 110000, "closeDate": "2026-05-30", "status": "Open" }
+  ],
+  "contacts": [
+    { "name": "Laura Chen", "title": "Global Director of Logistics", "city": "Singapore", "lastActivity": "2026-02-18", "engagementLevel": "High" },
+    { "name": "Michael O'Connor", "title": "VP Global Supply Chain", "city": "California", "lastActivity": "2026-02-19", "engagementLevel": "Medium" },
+    { "name": "Ravi Menon", "title": "Regional Operations Director – Middle East", "city": "Dubai", "lastActivity": "2026-02-14", "engagementLevel": "High" },
+    { "name": "Elena Fischer", "title": "Director of Distribution Operations – Europe", "city": "Amsterdam", "lastActivity": "2026-02-11", "engagementLevel": "High" },
+    { "name": "Daniel Brooks", "title": "Head of Logistics Technology", "city": "Austin", "lastActivity": "2026-02-16", "engagementLevel": "High" },
+    { "name": "Sophia Martinez", "title": "Finance Controller – Global Logistics", "city": "Austin", "lastActivity": "2025-11-22", "engagementLevel": "Low" }
+  ],
+  "activities": [
+    { "type": "Meeting", "subject": "Q4 Global Logistics Business Review", "date": "2025-12-12", "status": "Completed" },
+    { "type": "Meeting", "subject": "Jebel Ali operational planning session for peak season imports", "date": "2026-01-08", "status": "Completed" },
+    { "type": "Call", "subject": "Freight capacity planning for Asia to Europe lanes", "date": "2026-01-12", "status": "Completed" },
+    { "type": "Workshop", "subject": "Contract Logistics discovery workshop – Dubai RDC model", "date": "2026-01-20", "status": "Completed" },
+    { "type": "Demo", "subject": "Supply Chain Visibility Platform demonstration", "date": "2026-01-28", "status": "Completed" },
+    { "type": "Meeting", "subject": "European spare parts storage and fulfillment discussion", "date": "2026-02-03", "status": "Completed" },
+    { "type": "Call", "subject": "Digital exception alerting use-case review with logistics technology team", "date": "2026-02-07", "status": "Completed" },
+    { "type": "Demo", "subject": "Control Tower dashboard walkthrough for APAC operations", "date": "2026-02-10", "status": "Completed" },
+    { "type": "Meeting", "subject": "Port and terminal services commercial review – Jebel Ali", "date": "2026-02-13", "status": "Completed" },
+    { "type": "Workshop", "subject": "Returns and reverse logistics design session for UAE market", "date": "2026-02-17", "status": "Completed" },
+    { "type": "Email", "subject": "Draft proposal sent for Container Tracking and Exception Alerts bundle", "date": "2026-02-18", "status": "Completed" },
+    { "type": "Meeting", "subject": "Global account expansion review with VP Supply Chain", "date": "2026-02-19", "status": "Completed" }
+  ],
+  "commercialSignals": [
+    { "type": "Renewal", "summary": "Freight Forwarding – Asia to Middle East renewal confirmed for another annual term", "date": "2026-01-05", "sentiment": "Positive" },
+    { "type": "Shipment Volume", "summary": "Asia to Middle East shipment volume increased by 19% compared to previous quarter", "date": "2026-01-15", "sentiment": "Positive" },
+    { "type": "Shipment Volume", "summary": "Apple requested additional peak-season allocation on Europe-bound lanes", "date": "2026-01-22", "sentiment": "Positive" },
+    { "type": "Operational Request", "summary": "Operations team requested a proposal for regional warehousing and value-added services in Dubai", "date": "2026-01-24", "sentiment": "Positive" },
+    { "type": "Commercial Interest", "summary": "Digital team asked for bundled pricing across container tracking, alerting, and control tower analytics", "date": "2026-02-08", "sentiment": "Positive" },
+    { "type": "Service Expansion Request", "summary": "European operations team expressed interest in spare parts storage closer to key repair markets", "date": "2026-02-11", "sentiment": "Positive" }
+  ],
+  "marketingSignals": [
+    { "type": "Email Click", "summary": "Global Director of Logistics clicked Contract Logistics case study for regional distribution hubs", "date": "2026-01-18", "engagementLevel": "High" },
+    { "type": "Webinar", "summary": "Head of Logistics Technology attended DP World webinar on supply chain visibility and exception management", "date": "2026-01-30", "engagementLevel": "High" },
+    { "type": "Whitepaper Download", "summary": "Director of Distribution Operations downloaded whitepaper on spare parts warehousing optimization", "date": "2026-02-04", "engagementLevel": "High" },
+    { "type": "Email Click", "summary": "VP Global Supply Chain opened email on integrated sea-port-warehouse orchestration", "date": "2026-02-06", "engagementLevel": "Medium" },
+    { "type": "Product Page Visit", "summary": "Apple logistics technology team visited container tracking and exception alerting product pages multiple times", "date": "2026-02-15", "engagementLevel": "High" }
+  ],
+  "planHistory": []
+}
