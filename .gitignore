@@ -12,3 +12,17 @@ accordin-plugin/**/bin/
 accordin-plugin/**/obj/
 accordin-plugin/**/packages/
 *.snk
+# Visual Studio
+.vs/
+accordin-plugin/**/bin/
+accordin-plugin/**/obj/
+accordin-plugin/**/packages/
+
+# Signing key - never commit private keys
+*.snk
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
