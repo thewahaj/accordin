@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(nuget install:*)",
+      "Bash(msbuild AccordIn.Plugin.sln /p:Configuration=Debug /nologo /v:minimal)",
+      "Bash(cmd /c \"cd /d C:\\\\Wahaj\\\\Work\\\\Tech\\\\apps\\\\accordin\\\\accordin-plugin\\\\AccordIn.Plugin && \"\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\"\" AccordIn.Plugin.sln /p:Configuration=Debug /nologo /v:minimal 2>&1\")",
+      "Bash(cmd /c \"\"\"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe\"\" C:\\\\Wahaj\\\\Work\\\\Tech\\\\apps\\\\accordin\\\\accordin-plugin\\\\AccordIn.Plugin\\\\AccordIn.Plugin.sln /p:Configuration=Debug /nologo /v:minimal > C:\\\\Wahaj\\\\Work\\\\Tech\\\\apps\\\\accordin\\\\accordin-plugin\\\\build_output.txt 2>&1\")",
+      "Bash(powershell -Command \"& ''C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\MSBuild.exe'' ''C:\\\\Wahaj\\\\Work\\\\Tech\\\\apps\\\\accordin\\\\accordin-plugin\\\\AccordIn.Plugin\\\\AccordIn.Plugin.sln'' /p:Configuration=Debug /nologo /v:minimal\")",
+      "Bash(powershell -Command \"& ''C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\Common7\\\\IDE\\\\Extensions\\\\TestPlatform\\\\vstest.console.exe'' ''C:\\\\Wahaj\\\\Work\\\\Tech\\\\apps\\\\accordin\\\\accordin-plugin\\\\AccordIn.Plugin.Tests\\\\bin\\\\Debug\\\\AccordIn.Plugin.Tests.dll'' /logger:console\")",
+      "Bash(powershell -Command \"& ''C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\Common7\\\\IDE\\\\Extensions\\\\TestPlatform\\\\vstest.console.exe'' ''C:\\\\Wahaj\\\\Work\\\\Tech\\\\apps\\\\accordin\\\\accordin-plugin\\\\AccordIn.Plugin.Tests\\\\bin\\\\Debug\\\\AccordIn.Plugin.Tests.dll'' /TestAdapterPath:''C:\\\\Wahaj\\\\Work\\\\Tech\\\\apps\\\\accordin\\\\accordin-plugin\\\\AccordIn.Plugin.Tests\\\\packages\\\\MSTest.TestAdapter.2.2.10\\\\build\\\\net46'' /logger:console\")",
+      "Bash(powershell -Command \"& ''C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\Common7\\\\IDE\\\\Extensions\\\\TestPlatform\\\\vstest.console.exe'' ''C:\\\\Wahaj\\\\Work\\\\Tech\\\\apps\\\\accordin\\\\accordin-plugin\\\\AccordIn.Plugin.Tests\\\\bin\\\\Debug\\\\AccordIn.Plugin.Tests.dll'' /TestAdapterPath:''C:\\\\Wahaj\\\\Work\\\\Tech\\\\apps\\\\accordin\\\\accordin-plugin\\\\AccordIn.Plugin.Tests\\\\packages\\\\MSTest.TestAdapter.2.2.10\\\\build\\\\_common'' /logger:console\")"
+    ]
+  }
+}

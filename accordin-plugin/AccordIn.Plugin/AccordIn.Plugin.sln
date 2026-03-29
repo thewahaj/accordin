@@ -5,6 +5,8 @@ VisualStudioVersion = 17.10.35122.118
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccordIn.Plugin", "AccordIn.Plugin.csproj", "{6447CFC3-675B-42A5-965F-F792F1EAFC1A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AccordIn.Plugin.Tests", "..\AccordIn.Plugin.Tests\AccordIn.Plugin.Tests.csproj", "{8B5F4A2C-9D3E-4F1A-B7C6-2E8D05A14F9B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{6447CFC3-675B-42A5-965F-F792F1EAFC1A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6447CFC3-675B-42A5-965F-F792F1EAFC1A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6447CFC3-675B-42A5-965F-F792F1EAFC1A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B5F4A2C-9D3E-4F1A-B7C6-2E8D05A14F9B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B5F4A2C-9D3E-4F1A-B7C6-2E8D05A14F9B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B5F4A2C-9D3E-4F1A-B7C6-2E8D05A14F9B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B5F4A2C-9D3E-4F1A-B7C6-2E8D05A14F9B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
