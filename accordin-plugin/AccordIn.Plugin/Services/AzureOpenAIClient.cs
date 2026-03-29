@@ -28,10 +28,10 @@ namespace AccordIn.Plugin.Services
     {
         // ---- D365 environment variable schema names ----------------------------------------
         // These must match the schemaname values in the environmentvariabledefinition table.
-        private const string EnvVarEndpoint   = "accordin_AzureOpenAIEndpoint";
-        private const string EnvVarApiKey     = "accordin_AzureOpenAIApiKey";
-        private const string EnvVarDeployment = "accordin_AzureOpenAIDeploymentName";
-        private const string EnvVarApiVersion = "accordin_AzureOpenAIApiVersion";
+        private const string EnvVarEndpoint   = "wrl_accordin_AzureOpenAIEndpoint";
+        private const string EnvVarApiKey     = "wrl_accordin_AzureOpenAIKey";
+        private const string EnvVarDeployment = "wrl_accordin_ModelDeployment";
+        private const string EnvVarApiVersion = "wrl_accordin_AzureOpenAIApiVersion";
 
         // ---- Model call parameters — matches azureClient.js --------------------------------
         private const int    MaxTokens  = 4000;
