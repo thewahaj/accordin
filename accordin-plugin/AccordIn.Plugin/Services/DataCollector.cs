@@ -376,7 +376,7 @@ namespace AccordIn.Plugin.Services
 
             var query = new QueryExpression("contract")
             {
-                ColumnSet = new ColumnSet("title", "activeon", "expireson", "totalamount"),
+                ColumnSet = new ColumnSet("title", "activeon", "expireson", "totalprice"),
                 Criteria = new FilterExpression(LogicalOperator.And)
                 {
                     Conditions =
@@ -403,7 +403,7 @@ namespace AccordIn.Plugin.Services
                 Name        = e.GetAttributeValue<string>("title"),
                 StartDate   = start.HasValue  ? start.Value.ToString("yyyy-MM-dd")  : null,
                 RenewalDate = expiry.HasValue ? expiry.Value.ToString("yyyy-MM-dd") : null,
-                Value       = e.GetAttributeValue<Money>("totalamount")?.Value ?? 0m,
+                Value       = e.GetAttributeValue<Money>("totalprice")?.Value ?? 0m,
             };
         }
     }

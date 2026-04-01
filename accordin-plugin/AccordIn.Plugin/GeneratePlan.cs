@@ -1,5 +1,7 @@
 using System;
 using System.Linq;
+using System.Text;
+using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using AccordIn.Plugin.Models;
@@ -29,9 +31,8 @@ namespace AccordIn.Plugin
     /// </summary>
     public class GeneratePlan : IPlugin
     {
-        // D365 environment variable schema name for the cross-sell system prompt.
-        // A separate variable per intent keeps them independently maintainable (CLAUDE.md §5).
-        private const string EnvVarSystemPromptCrossSell = "accordin_SystemPromptCrossSell";
+        // System prompts are stored in wrl_intentprompt (one row per intent type).
+        // This avoids the D365 environment variable 2000-char limit on plain text fields.
 
         public void Execute(IServiceProvider serviceProvider)
         {
@@ -72,10 +73,9 @@ namespace AccordIn.Plugin
             tracer?.Trace($"[AccordIn] GeneratePlan — account {accountId}, type '{planType}'");
 
             // ------------------------------------------------------------------
-            // 2. Resolve system prompt from D365 environment variable
+            // 2. Load system prompt from wrl_intentprompt table
             // ------------------------------------------------------------------
-            var systemPromptEnvVar = SystemPromptEnvVarName(planType);
-            var systemPrompt       = ReadEnvVar(svc, systemPromptEnvVar);
+            var systemPrompt = ReadSystemPrompt(svc, planType);
 
             // ------------------------------------------------------------------
             // 3. Collect account data from Dataverse
@@ -240,64 +240,71 @@ namespace AccordIn.Plugin
         }
 
         // -----------------------------------------------------------------------------------------
-        // System prompt — one D365 environment variable per intent (CLAUDE.md §5)
+        // System prompt — read from wrl_intentprompt table, keyed by wrl_intenttype
         // -----------------------------------------------------------------------------------------
 
-        private static string SystemPromptEnvVarName(string planType)
+        private static string ReadSystemPrompt(IOrganizationService svc, string planType)
         {
-            switch (planType.ToLowerInvariant())
+            // Locate the wrl_intentprompt record for this intent type
+            var query = new QueryExpression("wrl_intentprompt")
             {
-                case "cross-sell": return EnvVarSystemPromptCrossSell;
-                default:
-                    throw new InvalidPluginExecutionException(
-                        $"AccordIn GeneratePlan: plan type '{planType}' is not yet implemented. " +
-                        "Only 'cross-sell' is currently supported.");
-            }
-        }
-
-        // -----------------------------------------------------------------------------------------
-        // Environment variable reader (shared pattern with AzureOpenAIClient)
-        // -----------------------------------------------------------------------------------------
-
-        private static string ReadEnvVar(IOrganizationService svc, string schemaName)
-        {
-            var query = new QueryExpression("environmentvariabledefinition")
-            {
-                ColumnSet = new ColumnSet("defaultvalue"),
+                ColumnSet = new ColumnSet(false), // primary key only — file content downloaded separately
                 Criteria  = new FilterExpression
                 {
                     Conditions =
                     {
-                        new ConditionExpression("schemaname", ConditionOperator.Equal, schemaName)
+                        new ConditionExpression("wrl_intenttype", ConditionOperator.Equal, planType)
                     }
                 },
                 TopCount = 1,
             };
 
-            var valueLink = query.AddLink(
-                "environmentvariablevalue",
-                "environmentvariabledefinitionid",
-                "environmentvariabledefinitionid",
-                JoinOperator.LeftOuter);
-            valueLink.Columns     = new ColumnSet("value");
-            valueLink.EntityAlias = "envval";
-
             var results = svc.RetrieveMultiple(query).Entities;
             if (results.Count == 0)
                 throw new InvalidPluginExecutionException(
-                    $"AccordIn: environment variable '{schemaName}' not found. " +
-                    "Ensure the AccordIn solution is installed in this environment.");
+                    $"AccordIn GeneratePlan: no system prompt found for intent type '{planType}'. " +
+                    $"Create a wrl_intentprompt record with wrl_intenttype = '{planType}'.");
 
-            var definition   = results[0];
-            var currentValue = (definition.GetAttributeValue<AliasedValue>("envval.value")?.Value as string)?.Trim();
-            var defaultValue = definition.GetAttributeValue<string>("defaultvalue")?.Trim();
-            var resolved     = string.IsNullOrEmpty(currentValue) ? defaultValue : currentValue;
+            var recordId  = results[0].Id;
+            var recordRef = new EntityReference("wrl_intentprompt", recordId);
 
-            if (string.IsNullOrEmpty(resolved))
+            // Download the prompt .txt file from the wrl_SystemPromptFile file column.
+            // Uses InitializeFileBlocksDownload + DownloadBlock (single-block; prompt files are well under 4 MB).
+            try
+            {
+                var initResponse = (InitializeFileBlocksDownloadResponse)svc.Execute(
+                    new InitializeFileBlocksDownloadRequest
+                    {
+                        Target            = recordRef,
+                        FileAttributeName = "wrl_systempromptfile"
+                    });
+
+                var downloadResponse = (DownloadBlockResponse)svc.Execute(
+                    new DownloadBlockRequest
+                    {
+                        FileContinuationToken = initResponse.FileContinuationToken,
+                        Offset                = 0,
+                        BlockLength           = initResponse.FileSizeInBytes
+                    });
+
+                var prompt = Encoding.UTF8.GetString(downloadResponse.Data).Trim();
+                if (string.IsNullOrEmpty(prompt))
+                    throw new InvalidPluginExecutionException(
+                        $"AccordIn GeneratePlan: system prompt file for '{planType}' is empty.");
+
+                return prompt;
+            }
+            catch (InvalidPluginExecutionException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
                 throw new InvalidPluginExecutionException(
-                    $"AccordIn: environment variable '{schemaName}' has no value set.");
-
-            return resolved;
+                    $"AccordIn GeneratePlan: could not download system prompt file for intent type '{planType}'. " +
+                    $"Ensure a .txt file is uploaded to wrl_SystemPromptFile on the wrl_intentprompt record. " +
+                    $"Detail: {ex.Message}");
+            }
         }
 
         // -----------------------------------------------------------------------------------------

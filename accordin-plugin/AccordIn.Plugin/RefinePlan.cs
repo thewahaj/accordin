@@ -112,10 +112,9 @@ Never give a generic textbook definition.";
             var planRecord = LoadPlan(svc, planId);
 
             // ------------------------------------------------------------------
-            // 3. System prompt + conversation suffix
+            // 3. Load system prompt from wrl_intentprompt, append conversation suffix
             // ------------------------------------------------------------------
-            var systemPromptEnvVar = SystemPromptEnvVarName(planRecord.PlanType);
-            var systemPrompt       = ReadEnvVar(svc, systemPromptEnvVar) + ConversationSystemSuffix;
+            var systemPrompt = ReadSystemPrompt(svc, planRecord.PlanType) + ConversationSystemSuffix;
 
             // ------------------------------------------------------------------
             // 4. Load conversation history
@@ -484,60 +483,36 @@ Never give a generic textbook definition.";
         }
 
         // -----------------------------------------------------------------------------------------
-        // System prompt routing + environment variable reader (mirrors GeneratePlan)
+        // System prompt — read from wrl_intentprompt table, keyed by wrl_intenttype
         // -----------------------------------------------------------------------------------------
 
-        private const string EnvVarSystemPromptCrossSell = "accordin_SystemPromptCrossSell";
-
-        private static string SystemPromptEnvVarName(string planType)
+        private static string ReadSystemPrompt(IOrganizationService svc, string planType)
         {
-            switch (planType)
+            var query = new QueryExpression("wrl_intentprompt")
             {
-                case "cross-sell": return EnvVarSystemPromptCrossSell;
-                default:
-                    throw new InvalidPluginExecutionException(
-                        $"AccordIn RefinePlan: plan type '{planType}' is not yet supported.");
-            }
-        }
-
-        private static string ReadEnvVar(IOrganizationService svc, string schemaName)
-        {
-            var query = new QueryExpression("environmentvariabledefinition")
-            {
-                ColumnSet = new ColumnSet("defaultvalue"),
+                ColumnSet = new ColumnSet("wrl_systemprompt"),
                 Criteria  = new FilterExpression
                 {
                     Conditions =
                     {
-                        new ConditionExpression("schemaname", ConditionOperator.Equal, schemaName)
+                        new ConditionExpression("wrl_intenttype", ConditionOperator.Equal, planType)
                     }
                 },
                 TopCount = 1,
             };
 
-            var valueLink = query.AddLink(
-                "environmentvariablevalue",
-                "environmentvariabledefinitionid",
-                "environmentvariabledefinitionid",
-                JoinOperator.LeftOuter);
-            valueLink.Columns     = new ColumnSet("value");
-            valueLink.EntityAlias = "envval";
-
             var results = svc.RetrieveMultiple(query).Entities;
             if (results.Count == 0)
                 throw new InvalidPluginExecutionException(
-                    $"AccordIn: environment variable '{schemaName}' not found.");
+                    $"AccordIn RefinePlan: no system prompt found for intent type '{planType}'. " +
+                    "Create a wrl_intentprompt record with wrl_intenttype = '{planType}'.");
 
-            var definition   = results[0];
-            var currentValue = (definition.GetAttributeValue<AliasedValue>("envval.value")?.Value as string)?.Trim();
-            var defaultValue = definition.GetAttributeValue<string>("defaultvalue")?.Trim();
-            var resolved     = string.IsNullOrEmpty(currentValue) ? defaultValue : currentValue;
-
-            if (string.IsNullOrEmpty(resolved))
+            var prompt = results[0].GetAttributeValue<string>("wrl_systemprompt")?.Trim();
+            if (string.IsNullOrEmpty(prompt))
                 throw new InvalidPluginExecutionException(
-                    $"AccordIn: environment variable '{schemaName}' has no value set.");
+                    $"AccordIn RefinePlan: wrl_intentprompt record for '{planType}' has an empty wrl_systemprompt.");
 
-            return resolved;
+            return prompt;
         }
 
         // -----------------------------------------------------------------------------------------

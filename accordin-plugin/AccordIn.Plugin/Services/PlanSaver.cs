@@ -172,8 +172,8 @@ namespace AccordIn.Plugin.Services
 
                 var entity = new Entity("wrl_engagementcadence")
                 {
-                    // Lookup casing: wrl_AccountPlan (capital A, P) per CLAUDE.md
-                    ["wrl_AccountPlan"]          = planRef,
+                    // Attribute key = logical name (lowercase). Schema name wrl_AccountPlan ≠ logical name.
+                    ["wrl_accountplan"]          = planRef,
                     ["wrl_cadencename"]          = cadence.Name,
                     ["wrl_contactname"]          = cadence.ContactTitle,
                     ["wrl_frequency"]            = new OptionSetValue(MapFrequency(cadence.Frequency)),
@@ -207,7 +207,7 @@ namespace AccordIn.Plugin.Services
 
                 var entity = new Entity("wrl_actionplan")
                 {
-                    ["wrl_AccountPlan"]          = planRef,
+                    ["wrl_accountplan"]          = planRef,
                     ["wrl_actiondescription"]    = action.Description,
                     ["wrl_prioritylevel"]        = new OptionSetValue(MapPriority(action.Priority)),
                     ["wrl_communicationchannel"] = new OptionSetValue(MapChannel(action.Channel)),
@@ -238,7 +238,7 @@ namespace AccordIn.Plugin.Services
 
                 var entity = new Entity("wrl_planrecommendation")
                 {
-                    ["wrl_AccountPlan"]          = planRef,
+                    ["wrl_accountplan"]          = planRef,
                     ["wrl_productname"]          = rec.ProductName,
                     ["wrl_recommendationtype"]   = new OptionSetValue(MapRecommendationType(rec.Type)),
                     ["wrl_description"]          = rec.Description,

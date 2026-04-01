@@ -349,6 +349,7 @@ body { font-family:var(--font); background:var(--surface); color:var(--text); fo
   <div class="api-notice" id="apiNotice">
     ℹ Running in standalone mode with mock data. When deployed as a D365 web resource, this page reads live data from <strong>wrl_accountplans</strong>, <strong>accounts</strong>, and related tables via the Dataverse Web API.
   </div>
+  <script>if (typeof Xrm !== 'undefined' || (window.parent && typeof window.parent.Xrm !== 'undefined')) document.getElementById('apiNotice').style.display = 'none';</script>
 
   <!-- Summary Cards -->
   <div class="cards">
@@ -468,12 +469,7 @@ body { font-family:var(--font); background:var(--surface); color:var(--text); fo
         </div>
         <div class="chat-status"></div>
       </div>
-      <div class="chat-msgs" id="chatMsgs">
-        <div class="msg ai">
-          <div class="msg-bubble">Plan loaded. The Jebel Ali Port Agreement at Negotiation stage is the primary near-term revenue driver. Ask me anything or request changes.</div>
-          <div class="msg-time">Just now</div>
-        </div>
-      </div>
+      <div class="chat-msgs" id="chatMsgs"></div>
       <div class="q-prompts">
         <button class="q-btn" onclick="qprompt(this)">Why Jebel Ali first?</button>
         <button class="q-btn" onclick="qprompt(this)">Finance risk?</button>
@@ -499,109 +495,93 @@ body { font-family:var(--font); background:var(--surface); color:var(--text); fo
 // ═══════════════════════════════════════════════════════════════
 
 const API = {
-  // Detect if running inside D365 (Xrm context available)
-  isD365: () => typeof Xrm !== 'undefined',
+  // Detect if running inside D365 — Xrm may live on window or window.parent
+  // depending on whether the web resource is hosted in an iframe or a full page
+  xrm: () => (typeof Xrm !== 'undefined' && Xrm) || (typeof window.parent.Xrm !== 'undefined' && window.parent.Xrm) || null,
+  isD365: () => API.xrm() !== null,
 
-  // Base URL for Dataverse Web API
-  base: () => {
-    if (API.isD365()) {
-      return `${Xrm.Utility.getGlobalContext().getClientUrl()}/api/data/v9.2`;
-    }
-    return null; // standalone mode
+  // GET — retrieve multiple records via Xrm.WebApi
+  async get(entityLogicalName, options) {
+    if (!API.isD365()) return { entities: [] };
+    return API.xrm().WebApi.retrieveMultipleRecords(entityLogicalName, options);
   },
 
-  // GET request to Dataverse
-  async get(endpoint) {
+  // GET single record by ID via Xrm.WebApi
+  async getRecord(entityLogicalName, id, options) {
     if (!API.isD365()) return null;
-    const url = `${API.base()}/${endpoint}`;
-    const res = await fetch(url, {
-      headers: {
-        'OData-MaxVersion': '4.0',
-        'OData-Version': '4.0',
-        'Accept': 'application/json',
-        'Content-Type': 'application/json; charset=utf-8',
-        'Prefer': 'odata.include-annotations="*"'
-      }
-    });
-    if (!res.ok) throw new Error(`API error: ${res.status}`);
-    return res.json();
+    return API.xrm().WebApi.retrieveRecord(entityLogicalName, id, options);
   },
 
-  // POST to Dataverse (create record)
+  // POST — create a record via Xrm.WebApi; returns the new record GUID
   async post(entity, data) {
     if (!API.isD365()) return null;
-    const res = await fetch(`${API.base()}/${entity}`, {
-      method: 'POST',
-      headers: {
-        'OData-MaxVersion': '4.0',
-        'OData-Version': '4.0',
-        'Accept': 'application/json',
-        'Content-Type': 'application/json; charset=utf-8'
-      },
-      body: JSON.stringify(data)
-    });
-    if (!res.ok) throw new Error(`Create error: ${res.status}`);
-    // Return the ID from the OData-EntityId header
-    const location = res.headers.get('OData-EntityId');
-    const match = location && location.match(/\(([^)]+)\)/);
-    return match ? match[1] : null;
+    const result = await API.xrm().WebApi.createRecord(entity, data);
+    return result.id;
   },
 
-  // PATCH to Dataverse (update record)
+  // PATCH — update a record via Xrm.WebApi
   async patch(entity, id, data) {
     if (!API.isD365()) return null;
-    await fetch(`${API.base()}/${entity}(${id})`, {
-      method: 'PATCH',
-      headers: {
-        'OData-MaxVersion': '4.0',
-        'OData-Version': '4.0',
-        'Content-Type': 'application/json; charset=utf-8',
-        'If-Match': '*'
-      },
-      body: JSON.stringify(data)
-    });
+    await API.xrm().WebApi.updateRecord(entity, id, data);
   },
 
-  // ── QUERY: Get account plans with account details ──────────
-  // Maps to: wrl_accountplans joined to accounts
-  // Account fields used: name, wrl_accounttier, wrl_ragstatus,
-  //   wrl_planstatus, wrl_requiresattention, wrl_plantarget,
-  //   wrl_actualrevenueytd, wrl_planprogress, wrl_relationshipscore
-  async getAccountPlans(ownerEmail) {
-    const select = [
+  // ── QUERY: Accounts where Tier is set, joined to their most recent plan ──
+  // Query 1: accounts where wrl_accounttier ne null (i.e. managed accounts)
+  // Query 2: all account plans, ordered by modifiedon desc
+  // Joined in JS: accountId → most recent plan
+  async getAccounts() {
+    const xrm = API.xrm();
+    const accountSelect = [
+      'accountid','name','industrycode',
+      'wrl_accounttier','wrl_ragstatus','wrl_planstatus',
+      'wrl_requiresattention','wrl_plantarget',
+      'wrl_actualrevenueytd','wrl_planprogress','wrl_relationshipscore'
+    ].join(',');
+    const planSelect = [
       'wrl_accountplanid','wrl_planname','wrl_planstatus','wrl_plantype',
       'wrl_planintent','wrl_revenuetarget','wrl_actualrevenue',
       'wrl_healthsummary','wrl_aiopeningstatement','wrl_growthobjectives',
       'wrl_planpayload','wrl_generatedtimestamp','wrl_confirmationtimestamp',
-      '_wrl_account_value'
+      'modifiedon','_wrl_account_value'
     ].join(',');
-    const expand = `wrl_account($select=name,accountid,wrl_accounttier,wrl_ragstatus,wrl_planstatus,wrl_requiresattention,wrl_plantarget,wrl_actualrevenueytd,wrl_planprogress,wrl_relationshipscore,industrycode,revenue)`;
-    const filter = ownerEmail ? `wrl_planowneremail eq '${ownerEmail}'` : '';
-    const query = filter
-      ? `wrl_accountplans?$select=${select}&$expand=${expand}&$filter=${filter}&$orderby=modifiedon desc`
-      : `wrl_accountplans?$select=${select}&$expand=${expand}&$orderby=modifiedon desc`;
-    return API.get(query);
+
+    const [accounts, plans] = await Promise.all([
+      xrm.WebApi.retrieveMultipleRecords('account',
+        `?$select=${accountSelect}&$filter=wrl_accounttier ne null&$orderby=name asc`),
+      xrm.WebApi.retrieveMultipleRecords('wrl_accountplan',
+        `?$select=${planSelect}&$orderby=modifiedon desc`)
+    ]);
+
+    // Build accountId → most recent plan map (results already sorted desc)
+    const planMap = {};
+    for (const plan of (plans.entities || [])) {
+      const aid = plan._wrl_account_value;
+      if (aid && !planMap[aid]) planMap[aid] = plan;
+    }
+
+    return { entities: accounts.entities || [], planMap };
   },
 
   // ── QUERY: Get child records for a plan ───────────────────
-  // Cadences: wrl_engagementcadences filtered by _wrl_accountplan_value
+  // All return Xrm.WebApi result — use .entities on the caller side
   async getCadences(planId) {
-    return API.get(`wrl_engagementcadences?$filter=_wrl_AccountPlan_value eq '${planId}'&$select=wrl_engagementcadenceid,wrl_cadencename,wrl_contactname,wrl_frequency,wrl_communicationchannel,wrl_purpose,wrl_rationale,wrl_locationawareness,wrl_status`);
+    return API.get('wrl_engagementcadence',
+      `?$select=wrl_engagementcadenceid,wrl_cadencename,wrl_contactname,wrl_frequency,wrl_communicationchannel,wrl_purpose,wrl_rationale,wrl_locationawareness,wrl_status&$filter=_wrl_accountplan_value eq '${planId}'`);
   },
 
-  // Actions: wrl_actionplans filtered by _wrl_accountplan_value
   async getActions(planId) {
-    return API.get(`wrl_actionplans?$filter=_wrl_AccountPlan_value eq '${planId}'&$select=wrl_actionplanid,wrl_actiondescription,wrl_prioritylevel,wrl_communicationchannel,wrl_suggestedtiming,wrl_rationale,wrl_currentstatus`);
+    return API.get('wrl_actionplan',
+      `?$select=wrl_actionplanid,wrl_actiondescription,wrl_prioritylevel,wrl_communicationchannel,wrl_suggestedtiming,wrl_rationale,wrl_currentstatus&$filter=_wrl_accountplan_value eq '${planId}'`);
   },
 
-  // Recommendations: wrl_planrecommendations filtered by _wrl_accountplan_value
   async getRecommendations(planId) {
-    return API.get(`wrl_planrecommendations?$filter=_wrl_AccountPlan_value eq '${planId}'&$select=wrl_planrecommendationid,wrl_productname,wrl_recommendationtype,wrl_description,wrl_rationale,wrl_estimatedvalue,wrl_confidence,wrl_confidencereason,wrl_sortorder&$orderby=wrl_sortorder asc`);
+    return API.get('wrl_planrecommendation',
+      `?$select=wrl_planrecommendationid,wrl_productname,wrl_recommendationtype,wrl_description,wrl_rationale,wrl_estimatedvalue,wrl_confidence,wrl_confidencereason,wrl_sortorder&$filter=_wrl_accountplan_value eq '${planId}'&$orderby=wrl_sortorder asc`);
   },
 
-  // Conversation: wrl_conversationmessages filtered by _wrl_accountplan_value
   async getMessages(planId) {
-    return API.get(`wrl_conversationmessages?$filter=_wrl_AccountPlan_value eq '${planId}'&$select=wrl_conversationmessageid,wrl_messagecontent,wrl_userrole,wrl_messagetimestamp,wrl_messagesequence&$orderby=wrl_messagesequence asc`);
+    return API.get('wrl_conversationmessage',
+      `?$select=wrl_conversationmessageid,wrl_messagecontent,wrl_userrole,wrl_messagetimestamp,wrl_messagesequence&$filter=_wrl_accountplan_value eq '${planId}'&$orderby=wrl_messagesequence asc`);
   },
 
   // ── WRITE: Save full plan payload back to Dataverse ───────
@@ -619,21 +599,21 @@ const API = {
     };
     if (planId) {
       // Update existing
-      await API.patch('wrl_accountplans', planId, payload);
+      await API.patch('wrl_accountplan', planId, payload);
       return planId;
     } else {
       // Create new — link to account
       payload['wrl_Account@odata.bind'] = `/accounts(${accountId})`;
       payload['wrl_planname'] = `Account Plan — ${new Date().toLocaleDateString('en-GB')}`;
       payload['wrl_plantype'] = 1; // Cross-sell
-      return API.post('wrl_accountplans', payload);
+      return API.post('wrl_accountplan', payload);
     }
   },
 
   // Write cadences
   async saveCadences(planId, cadences) {
     for (const c of cadences) {
-      await API.post('wrl_engagementcadences', {
+      await API.post('wrl_engagementcadence', {
         wrl_cadencename: c.name,
         wrl_contactname: c.contactTitle,
         wrl_frequency: mapFrequency(c.frequency),
@@ -649,7 +629,7 @@ const API = {
   // Write actions
   async saveActions(planId, actions) {
     for (const a of actions) {
-      await API.post('wrl_actionplans', {
+      await API.post('wrl_actionplan', {
         wrl_actiondescription: a.description,
         wrl_prioritylevel: mapPriority(a.priority),
         wrl_communicationchannel: mapChannel(a.channel),
@@ -664,15 +644,15 @@ const API = {
   async saveRecommendations(planId, recs) {
     for (let i = 0; i < recs.length; i++) {
       const r = recs[i];
-      await API.post('wrl_planrecommendations', {
-        wrl_productname: r.productName || r.type,
-        wrl_recommendationtype: mapRecType(r.type),
-        wrl_description: r.description,
-        wrl_rationale: r.rationale,
-        wrl_estimatedvalue: r.estimatedValue,
-        wrl_confidence: mapConfidence(r.confidence),
-        wrl_confidencereason: r.confidenceReason,
-        wrl_sortorder: i + 1,
+      await API.post('wrl_planrecommendation', {
+        wrl_ProductName: r.productName || r.type,
+        wrl_RecommendationType: mapRecType(r.type),
+        wrl_Description: r.description,
+        wrl_Rationale: r.rationale,
+        wrl_EstimatedValue: r.estimatedValue,
+        wrl_Confidence: mapConfidence(r.confidence),
+        wrl_ConfidenceReason: r.confidenceReason,
+        wrl_SortOrder: i + 1,
         'wrl_AccountPlan@odata.bind': `/wrl_accountplans(${planId})`
       });
     }
@@ -680,7 +660,7 @@ const API = {
 
   // Save chat message
   async saveMessage(planId, content, role, sequence) {
-    await API.post('wrl_conversationmessages', {
+    await API.post('wrl_conversationmessage', {
       wrl_messagecontent: content,
       wrl_userrole: role === 'user' ? 1 : 2,
       wrl_messagetimestamp: new Date().toISOString(),
@@ -769,20 +749,22 @@ let currentFilter = 'all';
 let currentSearch = '';
 let msgCount = 1;
 let currentPlanId = null;
+let currentAccountId = null;
+let currentAccount = null;
 
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
 async function init() {
   if (API.isD365()) {
-    document.getElementById('apiNotice').style.display = 'none';
     try {
-      const currentUser = Xrm.Utility.getGlobalContext().getUserName();
-      const data = await API.getAccountPlans();
-      allAccounts = transformD365Data(data.value || []);
+      const data = await API.getAccounts();
+      allAccounts = transformD365Data(data);
     } catch(e) {
-      console.error('D365 load error:', e);
-      allAccounts = MOCK_ACCOUNTS;
+      console.error('[AccordIn] init load error:', e);
+      allAccounts = [];
+      document.getElementById('apiNotice').textContent = `⚠ Failed to load account plans from Dataverse: ${e.message || 'Unknown error'}`;
+      document.getElementById('apiNotice').style.display = 'flex';
     }
   } else {
     allAccounts = MOCK_ACCOUNTS;
@@ -793,23 +775,27 @@ async function init() {
 }
 
 // Transform D365 API response to our display format
-function transformD365Data(records) {
-  return records.map(r => ({
-    id: r.wrl_accountplanid,
-    accountId: r._wrl_account_value,
-    name: r['wrl_account/name'] || r._wrl_account_value_Formatted || 'Unknown',
-    industry: r['wrl_account/industrycode@OData.Community.Display.V1.FormattedValue'] || '—',
-    tier: r['wrl_account/wrl_accounttier'] || 2,
-    planStatus: mapPlanStatus(r.wrl_planstatus),
-    rag: mapRAG(r['wrl_account/wrl_ragstatus']),
-    attention: { level: mapAttLevel(r['wrl_account/wrl_ragstatus']), text: r['wrl_account/wrl_requiresattention'] || 'On track' },
-    progress: r['wrl_account/wrl_planprogress'] || 0,
-    target: r['wrl_account/wrl_plantarget'] || r.wrl_revenuetarget || 0,
-    achieved: r['wrl_account/wrl_actualrevenueytd'] || r.wrl_actualrevenue || 0,
-    lastUpdated: r.modifiedon ? new Date(r.modifiedon).toLocaleDateString('en-GB') : '—',
-    planPayload: r.wrl_planpayload ? JSON.parse(r.wrl_planpayload) : null,
-    rawPlan: r
-  }));
+// Accepts { entities: account[], planMap: { accountId -> plan } }
+function transformD365Data({ entities, planMap }) {
+  return entities.map(acc => {
+    const plan = planMap[acc.accountid] || {};
+    return {
+      id: plan.wrl_accountplanid || acc.accountid,
+      accountId: acc.accountid,
+      name: acc.name || 'Unknown',
+      industry: acc['industrycode@OData.Community.Display.V1.FormattedValue'] || '—',
+      tier: acc.wrl_accounttier || 2,
+      planStatus: mapPlanStatus(plan.wrl_planstatus),
+      rag: mapRAG(acc.wrl_ragstatus),
+      attention: { level: mapAttLevel(acc.wrl_ragstatus), text: acc.wrl_requiresattention || 'On track' },
+      progress: acc.wrl_planprogress || 0,
+      target: acc.wrl_plantarget || plan.wrl_revenuetarget || 0,
+      achieved: acc.wrl_actualrevenueytd || plan.wrl_actualrevenue || 0,
+      lastUpdated: plan.modifiedon ? new Date(plan.modifiedon).toLocaleDateString('en-GB') : '—',
+      planPayload: plan.wrl_planpayload ? JSON.parse(plan.wrl_planpayload) : null,
+      rawPlan: plan
+    };
+  });
 }
 function mapPlanStatus(v) { return {1:'active',2:'draft',3:'none'}[v] || 'none'; }
 function mapRAG(v) { return {1:'green',2:'amber',3:'red'}[v] || 'amber'; }
@@ -901,26 +887,29 @@ function sortAccounts(v) {
 // ═══════════════════════════════════════════════════════════════
 async function openAccount(id) {
   const acc = allAccounts.find(a => a.id === id) || allAccounts[0];
+  currentAccount = acc;
+  currentAccountId = acc.accountId;
   document.getElementById('pAccName').textContent = acc.name;
   document.getElementById('pAccMeta').textContent = `Tier ${acc.tier} · ${acc.industry}`;
   document.getElementById('overlay').classList.add('on');
   document.getElementById('panel').classList.add('on');
-  currentPlanId = id;
+  // currentPlanId holds the plan GUID (may be null if account has no plan yet)
+  currentPlanId = acc.rawPlan?.wrl_accountplanid || null;
 
-  // Use plan payload if available (D365), else mock data
   let plan = MOCK_PLAN;
-  if (API.isD365() && acc.rawPlan) {
-    if (acc.planPayload) {
-      plan = acc.planPayload;
-    } else {
-      // Load child records and build plan object
-      try {
-        const [cads, acts, recs] = await Promise.all([
-          API.getCadences(id), API.getActions(id), API.getRecommendations(id)
-        ]);
-        plan = buildPlanFromD365(acc.rawPlan, cads?.value, acts?.value, recs?.value);
-      } catch(e) { console.error('Load plan error:', e); }
-    }
+  if (API.isD365()) {
+    try {
+      // Use the payload already loaded in init() if present, otherwise fetch it fresh
+      let payload = acc.planPayload;
+      if (!payload && currentPlanId) {
+        const record = await API.getRecord('wrl_accountplan', currentPlanId, '?$select=wrl_planpayload');
+        if (record?.wrl_planpayload) {
+          payload = JSON.parse(record.wrl_planpayload);
+          acc.planPayload = payload; // cache for subsequent opens
+        }
+      }
+      if (payload) plan = payload;
+    } catch(e) { console.error('[AccordIn] openAccount load error:', e); }
   }
   renderPlan(plan, acc);
 }
@@ -936,13 +925,13 @@ function buildPlanFromD365(planRecord, cadences, actions, recs) {
     revenueTarget: planRecord.wrl_revenuetarget || 0,
     forecastNarrative: '—',
     recommendations: (recs || []).map(r => ({
-      type: r['wrl_recommendationtype@OData.Community.Display.V1.FormattedValue'] || 'cross-sell',
-      productName: r.wrl_productname,
-      description: r.wrl_description,
-      rationale: r.wrl_rationale,
-      estimatedValue: r.wrl_estimatedvalue,
-      confidence: r['wrl_confidence@OData.Community.Display.V1.FormattedValue'] || 'medium',
-      confidenceReason: r.wrl_confidencereason
+      type: r['wrl_RecommendationType@OData.Community.Display.V1.FormattedValue'] || 'cross-sell',
+      productName: r.wrl_ProductName,
+      description: r.wrl_Description,
+      rationale: r.wrl_Rationale,
+      estimatedValue: r.wrl_EstimatedValue,
+      confidence: r['wrl_Confidence@OData.Community.Display.V1.FormattedValue'] || 'medium',
+      confidenceReason: r.wrl_ConfidenceReason
     })),
     cadences: (cadences || []).map(c => ({
       name: c.wrl_cadencename,
@@ -964,8 +953,10 @@ function buildPlanFromD365(planRecord, cadences, actions, recs) {
 }
 
 function openCreatePanel(id) {
-  currentPlanId = id;
   const acc = allAccounts.find(a => a.id === id) || allAccounts[0];
+  currentAccount = acc;
+  currentAccountId = acc?.accountId || null;
+  currentPlanId = null;
   document.getElementById('pAccName').textContent = acc?.name || 'New Account Plan';
   document.getElementById('pAccMeta').textContent = `Tier ${acc?.tier || 1} · ${acc?.industry || '—'}`;
   document.getElementById('overlay').classList.add('on');
@@ -1107,6 +1098,21 @@ function renderPlan(plan, acc) {
         </div>`;
       }).join('')}
     </div>`;
+  setCopilotState('ready', acc?.name);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COPILOT STATE
+// ═══════════════════════════════════════════════════════════════
+function setCopilotState(state, accountName) {
+  const msgs = document.getElementById('chatMsgs');
+  if (!msgs) return;
+  const text = {
+    idle:       'Select a planning intent above and click Generate Plan. I will analyse the account data and walk you through the plan as it is generated.',
+    generating: 'Analysing account data from Dataverse... reading opportunities, contacts, signals and activities.',
+    ready:      `Plan loaded for ${accountName || 'this account'}. Ask me anything about this plan or tell me what to change.`
+  }[state] || '';
+  msgs.innerHTML = `<div class="msg ai"><div class="msg-bubble">${text}</div><div class="msg-time">Just now</div></div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1127,37 +1133,80 @@ function renderCreateMode() {
       </div>
       <button class="btn btn-primary" style="font-size:13px;padding:10px 28px" onclick="generatePlan()">Generate Plan →</button>
     </div>`;
+  setCopilotState('idle');
 }
 
 function selIntent(el) { document.querySelectorAll('.intent-opt').forEach(o=>o.classList.remove('on')); el.classList.add('on'); }
 
-function generatePlan() {
+async function generatePlan() {
+  setCopilotState('generating');
   document.getElementById('pMid').innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;padding:40px;">
       <div class="spin"></div>
       <div style="font-size:13px;color:var(--text-muted)">Collecting account data from Dataverse...</div>
       <div style="font-size:11px;color:var(--slate-lt);text-align:center;max-width:260px">Reading opportunities, contacts, activities and signals. Calling the planning copilot.</div>
     </div>`;
-  setTimeout(async () => {
-    document.getElementById('pLeft').style.display = 'flex';
-    document.querySelectorAll('.p-tab').forEach(t=>t.classList.remove('on'));
-    document.querySelectorAll('.p-tab')[0].classList.add('on');
-    const acc = allAccounts.find(a=>a.id===currentPlanId)||allAccounts[0];
-    renderPlan(MOCK_PLAN, acc);
-    // In D365: save the generated plan
-    if (API.isD365()) {
-      const newPlanId = await API.savePlan(null, MOCK_PLAN, acc.accountId);
-      if (newPlanId) {
-        await Promise.all([
-          API.saveCadences(newPlanId, MOCK_PLAN.cadences),
-          API.saveActions(newPlanId, MOCK_PLAN.oneOffActions),
-          API.saveRecommendations(newPlanId, MOCK_PLAN.recommendations)
-        ]);
-        currentPlanId = newPlanId;
+
+  if (!API.isD365()) {
+    // Standalone / mock mode — simulate the async delay and render mock data
+    setTimeout(() => {
+      document.getElementById('pLeft').style.display = 'flex';
+      document.querySelectorAll('.p-tab').forEach(t => t.classList.remove('on'));
+      document.querySelectorAll('.p-tab')[0].classList.add('on');
+      renderPlan(MOCK_PLAN, currentAccount || allAccounts[0]);
+    }, 2400);
+    return;
+  }
+
+  try {
+    if (!currentAccountId) throw new Error('No account selected. Close this panel and open an account first.');
+
+    const intentLabel = document.querySelector('.intent-opt.on .intent-lbl')?.textContent || 'Cross-sell';
+    const intentDesc  = document.querySelector('.intent-opt.on .intent-desc')?.textContent || '';
+    const planType    = intentLabel.toLowerCase();
+    const planIntent  = intentDesc || intentLabel;
+
+    const request = {
+      AccountId: currentAccountId,
+      PlanIntent: planIntent,
+      PlanType: planType,
+      getMetadata: function() {
+        return {
+          boundParameter: null,
+          parameterTypes: {
+            AccountId: { typeName: 'Edm.String', structuralProperty: 1 },
+            PlanIntent: { typeName: 'Edm.String', structuralProperty: 1 },
+            PlanType:   { typeName: 'Edm.String', structuralProperty: 1 }
+          },
+          operationType: 0,
+          operationName: 'accordin_GeneratePlan'
+        };
       }
-    }
-    addMsg('ai', 'Plan generated for this account. I identified 7 open opportunities with a combined pipeline of £3.84M. The Jebel Ali Port Agreement at Negotiation stage is your primary revenue driver. What would you like to refine?');
-  }, 2400);
+    };
+
+    const response = await API.xrm().WebApi.online.execute(request);
+    const result   = await response.json();
+    const planId   = result.PlanId;
+    if (!planId) throw new Error('Plugin did not return a PlanId. Check the plugin trace log.');
+
+    // Fetch the plan payload the plugin just saved to Dataverse
+    const planRecord = await API.getRecord('wrl_accountplan', planId, '?$select=wrl_planpayload');
+    const plan = planRecord?.wrl_planpayload ? JSON.parse(planRecord.wrl_planpayload) : null;
+    if (!plan) throw new Error('Plan was saved but the payload could not be loaded from Dataverse.');
+
+    currentPlanId = planId;
+    document.getElementById('pLeft').style.display = 'flex';
+    document.querySelectorAll('.p-tab').forEach(t => t.classList.remove('on'));
+    document.querySelectorAll('.p-tab')[0].classList.add('on');
+    renderPlan(plan, currentAccount);
+    // setCopilotState('ready', ...) is called inside renderPlan
+  } catch (e) {
+    console.error('[AccordIn] generatePlan error:', e);
+    // Show error in copilot panel and restore intent selector so user can retry
+    const msgs = document.getElementById('chatMsgs');
+    if (msgs) msgs.innerHTML = `<div class="msg ai"><div class="msg-bubble" style="color:#dc2626"><strong>Plan generation failed.</strong> ${e.message || 'An unexpected error occurred. Check the plugin trace log for details.'}</div><div class="msg-time">Just now</div></div>`;
+    renderCreateMode();
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1213,17 +1262,55 @@ function qprompt(btn) {
   }, 700);
 }
 
-function sendChat() {
+async function sendChat() {
   const ta = document.getElementById('chatTa');
   const txt = ta.value.trim();
   if (!txt) return;
   addMsg('user', txt);
-  ta.value=''; ta.style.height='auto';
-  setTimeout(() => {
-    const k = txt.toLowerCase();
-    const match = Object.keys(RESPONSES).find(r=>r!=='default'&&k.includes(r));
-    addMsg('ai', match?RESPONSES[match]:RESPONSES['default']);
-  }, 800);
+  ta.value = ''; ta.style.height = 'auto';
+
+  if (API.isD365() && currentPlanId) {
+    const request = {
+      PlanId: currentPlanId,
+      UserMessage: txt,
+      getMetadata: function() {
+        return {
+          boundParameter: null,
+          parameterTypes: {
+            PlanId:      { typeName: 'Edm.String', structuralProperty: 1 },
+            UserMessage: { typeName: 'Edm.String', structuralProperty: 1 }
+          },
+          operationType: 0,
+          operationName: 'accordin_RefinePlan'
+        };
+      }
+    };
+    try {
+      const response = await API.xrm().WebApi.online.execute(request);
+      const result   = await response.json();
+      addMsg('ai', result.ResponseMessage || 'Done.');
+      if (result.IsPlanUpdate) {
+        // Plugin updated the plan in Dataverse — reload payload and re-render
+        const record = await API.get(`wrl_accountplans(${currentPlanId})?$select=wrl_planpayload`);
+        if (record?.wrl_planpayload) {
+          const plan = JSON.parse(record.wrl_planpayload);
+          const acc = allAccounts.find(a => a.id === currentPlanId) || allAccounts[0];
+          if (acc) acc.planPayload = plan;
+          renderPlan(plan, acc);
+        }
+      }
+    } catch(e) {
+      console.error('[AccordIn] sendChat error:', e);
+      addMsg('ai', 'An error occurred while processing your request. Please try again.');
+    }
+  } else {
+    // Standalone / mock mode
+    setTimeout(() => {
+      const k = txt.toLowerCase();
+      const match = Object.keys(RESPONSES).find(r => r !== 'default' && k.includes(r));
+      addMsg('ai', match ? RESPONSES[match] : RESPONSES['default']);
+    }, 800);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
