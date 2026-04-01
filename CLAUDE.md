@@ -2,11 +2,11 @@
 
 ## What is AccordIn
 
-AccordIn is an AI-native account planning copilot built natively on Microsoft Dynamics 365 CE and Power Platform. The name combines Account + Coordination + Intelligence.
+AccordIn is an AI-native account planning copilot built natively on Microsoft Dynamics 365 CE and Power Platform. The name combines Account + Coordination + Intelligence. Stylised as **AccordIn**.
 
 It surfaces account planning intelligence that account managers miss — who the primary relationship contact is, which opportunity should lead based on pipeline stage, where approval risks are, and what the grounded revenue forecast looks like — through a conversational interface embedded directly in the CRM.
 
-**This is not a bolt-on overlay.** The plan lives in Dataverse. The intelligence comes from a fine-tuned GPT-4o model on Azure AI Foundry. The UI is a D365 web resource. The whole system is native to the Microsoft stack.
+**This is not a bolt-on overlay.** The plan lives in Dataverse. The intelligence comes from a fine-tuned GPT-4o model on Azure AI Foundry. The UI is a D365 HTML web resource. The data collection and AI call happen inside a D365 C# plugin. The whole system is native to the Microsoft stack.
 
 ---
 
@@ -14,249 +14,366 @@ It surfaces account planning intelligence that account managers miss — who the
 
 ```
 AccordIn/
+├── CLAUDE.md                      # This file — read first every session
+├── README.md
 ├── docs/                          # Architecture decisions and article drafts
 ├── model/                         # AI model layer
-│   ├── prompts/cross-sell/        # System prompts
+│   ├── prompts/cross-sell/        # System prompts (system-prompt.txt)
 │   └── training-data/             # Fine-tuning JSONL files
-├── copilot-service/               # Node.js prototype backend
-│   ├── src/routes/run.js          # Pipeline pre-calculation + model call
-│   ├── src/routes/chat.js         # Conversational refinement
-│   ├── src/azureClient.js         # Azure OpenAI client
+├── copilot-service/               # Node.js prototype (reference implementation)
+│   ├── src/routes/run.js          # KEY FILE: pipeline pre-calc + model call logic to port to C#
+│   ├── src/routes/chat.js         # Conversational refinement logic
 │   └── test-data/cross-sell/      # System prompt + scenario JSON files
-├── frontend/                      # React evaluation/testing app (prototype only)
+├── frontend/                      # React evaluation app (prototype only)
+├── accordin-plugin/               # C# D365 Plugin (production intelligence layer)
+│   └── AccordIn.Plugin/
+│       ├── GeneratePlan.cs        # IPlugin for accordin_GeneratePlan Custom API
+│       ├── RefinePlan.cs          # IPlugin for accordin_RefinePlan Custom API
+│       ├── Services/
+│       │   ├── DataCollector.cs   # Reads account data from Dataverse
+│       │   ├── PipelineCalculator.cs # Port of run.js calculatePipeline()
+│       │   ├── ContactEnricher.cs    # Port of run.js enrichContacts()
+│       │   ├── AzureOpenAIClient.cs  # Calls Azure OpenAI via HttpClient
+│       │   └── PlanSaver.cs          # Writes plan + child records to Dataverse
+│       └── Models/
+│           ├── AccountPlanData.cs    # Input data model
+│           └── PlanResponse.cs       # Output model matching JSON schema
 ├── power-platform/
-│   ├── web-resources/accordin-hub/ # AccordIn Hub HTML web resource
-│   ├── data-model/                # Dataverse table definitions
-│   ├── flows/                     # Power Automate flows
-│   └── environment-variables/     # D365 environment variable definitions
-└── sample-data/                   # Demo account scenarios
+│   ├── web-resources/accordin-hub/  # AccordIn Hub HTML web resource
+│   ├── data-model/                  # Dataverse table definitions
+│   └── environment-variables/       # D365 environment variable definitions
+└── sample-data/                     # Demo account scenarios
 ```
 
 ---
 
-## Architecture Overview
+## Architecture
 
-### Three Layers
+### The clean architecture — no Azure Functions, no flows for data collection
 
-**Model Layer (Azure AI Foundry)**
-- Base model: GPT-4o (gpt-4o-2024-08-06)
-- Fine-tuned model: gpt-4o-2024-08-06-v2 (deployment name, East US 2)
-- Fine-tuning suffix: acc_plan_ft
-- 16 training examples across 5 scenario types
-- System prompt: model/prompts/cross-sell/system-prompt.txt (~2700 tokens)
+```
+AccordIn Hub (HTML web resource)
+    ↓  Xrm.WebApi.online.execute('accordin_GeneratePlan', { accountId, planIntent })
+accordin_GeneratePlan Custom API
+    ↓  C# Plugin — GeneratePlan.cs
+    ↓  DataCollector.cs      → reads Account, Opportunity, Contact, Activity, Signals
+    ↓  PipelineCalculator.cs → calculates exactTotal, weightedTotal, totalLow, totalHigh
+    ↓  ContactEnricher.cs    → derives suggestedPlanRole for each contact
+    ↓  AzureOpenAIClient.cs  → calls Azure OpenAI (key from D365 environment variable)
+    ↓  post-processing       → overwrite revenue figures, fix hasCadence
+    ↓  PlanSaver.cs          → writes plan + cadences + actions + recommendations to Dataverse
+    ↓  returns planPayload (JSON) + planId (GUID)
+AccordIn Hub → renders plan canvas
+```
 
-**Service Layer (Node.js → Azure Function eventually)**
-- Entry: copilot-service/src/server.js (Express, port 3001)
-- Key file: copilot-service/src/routes/run.js — this is where the intelligence pipeline lives
-- Calls Azure OpenAI with pre-calculated pipeline data injected into the user message
-
-**CRM Layer (D365 CE + Dataverse)**
-- Web resource: power-platform/web-resources/accordin-hub/account-planning-hub-v2.html
-- Custom tables: see Dataverse Schema section below
-- Dataverse Web API v9.2 for all reads and writes
+**Why Custom API over Power Automate Flow:** Flows are slow (per-step overhead), hard to debug, and fragile. A C# plugin executes in milliseconds, runs inside D365 with no extra hosting, inherits D365 auth, and is version-controlled as code. Use flows only for event-driven triggers, not data collection and processing.
 
 ---
 
 ## Key Architectural Decisions — DO NOT CHANGE WITHOUT UNDERSTANDING WHY
 
-### 1. Pipeline Pre-Calculation (run.js)
-The backend calculates exactTotal, weightedTotal, totalLow, and totalHigh BEFORE calling the model. These are injected as verified facts into the user message. After the model responds, the backend OVERWRITES the model's revenue figures with the pre-calculated values.
+### 1. Pipeline Pre-Calculation (PipelineCalculator.cs — ported from run.js)
 
-**Why:** LLMs cannot do arithmetic reliably. We tried letting the model calculate — it consistently got the wrong total. The fix was to make it impossible for the model to compute by stripping individual opportunity values from the JSON sent to the model.
+Pre-calculate exactTotal, weightedTotal, totalLow, and totalHigh BEFORE calling the model. Inject as verified facts into the user message. After model responds, OVERWRITE the model's revenue figures with pre-calculated values.
 
-```javascript
+**Why:** LLMs cannot do arithmetic reliably. Individual opportunity values are stripped from the JSON sent to the model so it cannot recompute them.
+
+```csharp
 // Stage weights — never change these
-const STAGE_WEIGHTS = {
-  'negotiation': 0.85,
-  'propose':     0.65,
-  'qualify':     0.40,
-  'discovery':   0.20,
+private static readonly Dictionary<string, double> StageWeights = new()
+{
+    { "negotiation", 0.85 },
+    { "propose",     0.65 },
+    { "qualify",     0.40 },
+    { "discovery",   0.20 }
 };
-// totalLow = highest stage opportunities only × their weight
-// totalMid = all opportunities × their stage weights (this is revenueTarget)
-// totalHigh = raw pipeline total (exactTotal)
+// totalLow  = highest-stage opportunities only × their weight (the floor)
+// totalMid  = all opportunities × stage weights (= revenueTarget)
+// totalHigh = raw pipeline total (= exactTotal)
 ```
 
-### 2. Contact Role Enrichment (run.js — enrichContacts function)
-Before calling the model, the backend derives a suggestedPlanRole for each contact using simple rules. This is injected into the user message as guidance. The model can override it but starts from a grounded signal.
+### 2. Contact Role Enrichment (ContactEnricher.cs — ported from run.js)
 
-Rules:
-- Most senior title + highest engagement + most recent activity = primary-relationship
-- Finance/legal/procurement title + Low engagement = approval-risk
-- High engagement + recent activity OR owns named opportunity = opportunity-owner
-- No activity = no-data
-- Low/Unknown engagement with no opportunity = low-priority
+Derive suggestedPlanRole for each contact before calling the model. Inject as guidance in the user message.
 
-### 3. hasCadence Post-Processing (run.js)
-After the model responds, the backend checks every contact in contactEngagement against the actual cadences array and sets hasCadence correctly. The model self-reports this inaccurately — we fix it programmatically.
+Rules (in priority order):
+- Most senior title + highest engagement + most recent activity = **primary-relationship**
+- Finance/legal/procurement title + Low engagement = **approval-risk**
+- High engagement + recent activity OR owns named opportunity = **opportunity-owner**
+- No activity recorded = **no-data**
+- Low/Unknown engagement, no opportunity = **low-priority**
 
-### 4. Plan Payload Storage (Dataverse)
-The full JSON plan is stored in wrl_planpayload (nvarchar) on the wrl_accountplan record. Key fields are also mapped to structured columns for reporting. This means the UI can always reconstruct itself from the raw payload — no dependency on child records being loaded first.
+### 3. hasCadence Post-Processing (GeneratePlan.cs)
 
-### 5. Intent-Driven Routing
-The system prompt and few-shot examples are per-intent. Currently only cross-sell is built. When adding upsell, retention, or relationship intents, create a new folder under copilot-service/test-data/ with its own system-prompt.txt and scenarios/.
+After the model responds, cross-check every contact in contactEngagement against the actual cadences array and set hasCadence correctly. The model self-reports this inaccurately — fix it programmatically after parsing the response.
+
+### 4. Revenue Post-Processing (GeneratePlan.cs)
+
+After parsing the model response, overwrite revenuePicture.totalLow, totalMid, totalHigh and revenueTarget with the pre-calculated verified values. Never trust the model's arithmetic for these fields.
+
+### 5. Plan Payload as Source of Truth
+
+Store the full JSON plan in wrl_planpayload (nvarchar) on the wrl_accountplan record. Key fields are also mapped to structured columns for reporting and list views. The UI reconstructs from wrl_planpayload.
+
+### 6. Azure OpenAI Credentials
+
+Store the API key in a D365 Environment Variable (type: Secret) named **accordin_AzureOpenAIKey**. The plugin reads it via IOrganizationService at runtime. Never hardcode credentials.
+
+---
+
+## C# Plugin — Key Implementation Notes
+
+### GeneratePlan.cs entry point pattern
+```csharp
+public class GeneratePlan : IPlugin
+{
+    public void Execute(IServiceProvider serviceProvider)
+    {
+        var context = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
+        var serviceFactory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
+        var service = serviceFactory.CreateOrganizationService(context.UserId);
+
+        // Read input parameters
+        var accountId = ((EntityReference)context.InputParameters["accountId"]).Id;
+        var planIntent = (string)context.InputParameters["planIntent"];
+
+        // Orchestrate services
+        var data = new DataCollector(service).Collect(accountId);
+        var pipeline = PipelineCalculator.Calculate(data.Opportunities);
+        var enrichedContacts = ContactEnricher.Enrich(data.Contacts, data.Opportunities);
+        var apiKey = GetEnvironmentVariable(service, "accordin_AzureOpenAIKey");
+        var endpoint = GetEnvironmentVariable(service, "accordin_AzureOpenAIEndpoint");
+        var modelDeployment = GetEnvironmentVariable(service, "accordin_ModelDeployment");
+        var rawJson = new AzureOpenAIClient(endpoint, apiKey, modelDeployment)
+            .GeneratePlan(data, pipeline, enrichedContacts, planIntent);
+        var plan = PostProcess(rawJson, pipeline); // overwrite revenue figures, fix hasCadence
+        var planId = new PlanSaver(service).Save(accountId, plan, planIntent);
+
+        // Set output parameters
+        context.OutputParameters["planPayload"] = System.Text.Json.JsonSerializer.Serialize(plan);
+        context.OutputParameters["planId"] = planId.ToString();
+    }
+}
+```
+
+### Reading D365 Environment Variables from a plugin
+```csharp
+private string GetEnvironmentVariable(IOrganizationService service, string schemaName)
+{
+    var query = new QueryExpression("environmentvariablevalue")
+    {
+        ColumnSet = new ColumnSet("value"),
+        Criteria = new FilterExpression()
+    };
+    query.Criteria.AddCondition("schemaname", ConditionOperator.Equal, schemaName);
+    var results = service.RetrieveMultiple(query);
+    return results.Entities.FirstOrDefault()?["value"]?.ToString() ?? string.Empty;
+}
+```
+
+### Calling Dataverse Web API from the hub
+```javascript
+// Call Custom API from web resource
+const request = {
+    getMetadata: () => ({
+        boundParameter: null,
+        parameterTypes: {
+            accountId: { typeName: "mscrm.account", structuralProperty: 5 },
+            planIntent: { typeName: "Edm.String", structuralProperty: 1 }
+        },
+        operationType: 0,
+        operationName: "accordin_GeneratePlan"
+    }),
+    accountId: { entityType: "account", id: accountId },
+    planIntent: selectedIntent
+};
+const result = await Xrm.WebApi.online.execute(request);
+const plan = JSON.parse(result.planPayload);
+```
 
 ---
 
 ## Dataverse Schema
 
-**All custom tables use prefix: wrl_**
+**Source of truth: all_tables_fields_fixed.csv**
+Two name types for every field — always use the correct one for the context:
+- **Schema Name** (camelCase, e.g. `wrl_AccountPlan`) — use in `@odata.bind`, `$expand`, and C# `Entity[]` attribute access
+- **Logical Name** (lowercase, e.g. `wrl_accountplan`) — use in `$filter`, `$select`, `context.InputParameters[]`, `QueryExpression`, and `entity.Attributes[]`
 
-### wrl_accountplan (Account Plan)
-Primary entity. Links to standard Account table.
-- wrl_accountplanid — Primary Key
-- wrl_account — Lookup to Account (required)
-- wrl_planname — Text
-- wrl_plantype — Choice (1=Cross-sell, 2=Upsell, 3=Retention, 4=Relationship)
-- wrl_planstatus — Choice (1=Draft, 2=Pending Approval, 3=Active, 4=Archived)
-- wrl_planintent — Text (the AM's intent typed into the copilot)
-- wrl_planpayload — Multiline Text (full JSON from model — source of truth)
-- wrl_aiopeningstatement — Text
-- wrl_healthsummary — Text
-- wrl_growthobjectives — Text
-- wrl_revenuetarget — Currency (totalMid)
-- wrl_actualrevenue — Currency (achieved YTD)
-- wrl_planowneremail — Text
-- wrl_generatedtimestamp — DateTime
-- wrl_confirmationtimestamp — DateTime
-
-### wrl_engagementcadence (Engagement Cadence)
-Child of Account Plan.
-- wrl_engagementcadenceid — Primary Key
-- wrl_AccountPlan — Lookup to wrl_accountplan (use this exact casing)
-- wrl_cadencename — Text
-- wrl_contactname — Text (contact name — text for now, future lookup to Contact)
-- wrl_frequency — Choice (1=Weekly, 2=Biweekly, 3=Monthly, 4=Quarterly)
-- wrl_communicationchannel — Choice (1=Phone, 2=Online Meeting, 3=In-Person, 4=Email, 5=Other)
-- wrl_purpose — Multiline Text
-- wrl_rationale — Multiline Text
-- wrl_locationawareness — Boolean
-- wrl_status — Choice (1=Active, 2=Paused, 3=Completed)
-- wrl_startdate — DateTime
-- wrl_manageradjustment — Boolean (true if AM manually edited this cadence)
-
-### wrl_actionplan (One-off Action)
-Child of Account Plan.
-- wrl_actionplanid — Primary Key
-- wrl_AccountPlan — Lookup to wrl_accountplan
-- wrl_actiondescription — Multiline Text
-- wrl_prioritylevel — Choice (1=High, 2=Medium, 3=Low)
-- wrl_communicationchannel — Choice (same as cadence)
-- wrl_suggestedtiming — Text
-- wrl_rationale — Multiline Text
-- wrl_currentstatus — Choice (1=To Do, 2=In Progress, 3=Done)
-
-### wrl_planrecommendation (Plan Recommendation) — CREATE THIS TABLE
-Child of Account Plan. Replaces the incorrectly imported wrl_salesopportunity.
-- wrl_planrecommendationid — Primary Key
-- wrl_AccountPlan — Lookup to wrl_accountplan
-- wrl_Opportunity — Lookup to Opportunity (nullable — links to native D365 opportunity)
-- wrl_productname — Text
-- wrl_recommendationtype — Choice (1=Cross-sell, 2=Upsell, 3=Retention, 4=Relationship)
-- wrl_description — Multiline Text
-- wrl_rationale — Multiline Text
-- wrl_estimatedvalue — Currency
-- wrl_confidence — Choice (1=High, 2=Medium, 3=Low)
-- wrl_confidencereason — Text
-- wrl_sortorder — Whole Number (1, 2, 3)
-
-### wrl_conversationmessage (Chat Message)
-Child of Account Plan. Stores copilot chat history.
-- wrl_conversationmessageid — Primary Key
-- wrl_AccountPlan — Lookup to wrl_accountplan
-- wrl_messagecontent — Multiline Text
-- wrl_userrole — Choice (1=User, 2=Assistant)
-- wrl_messagetimestamp — DateTime
-- wrl_messagesequence — Whole Number
-
-### wrl_businesssignal (Business Signal)
-Account-level. NOT linked to plan.
-- wrl_businesssignalid — Primary Key
-- wrl_Account — Lookup to Account
-- wrl_signalsummary — Text
-- wrl_signalcategory — Choice
-- wrl_signaltimestamp — DateTime
-- wrl_sentimentstatus — Choice (1=Positive, 2=Neutral, 3=Negative/Risk)
-- wrl_signalpayload — Multiline Text (full signal JSON)
-
-### wrl_marketingtouchpoint (Marketing Touchpoint)
-Account-level. NOT linked to plan.
-- wrl_marketingtouchpointid — Primary Key
-- wrl_Account — Lookup to Account
-- wrl_Contact — Lookup to Contact (optional)
-- wrl_touchpointsummary — Text
-- wrl_touchpointtype — Choice
-- wrl_touchpointdatetime — DateTime
-- wrl_engagementlevel — Choice (1=High, 2=Medium, 3=Low)
-
-### Account table — custom fields needed (prefix wrl_)
-- wrl_accounttier — Choice (1=Tier 1, 2=Tier 2, 3=Tier 3)
-- wrl_relationshipscore — Whole Number (0-100)
-- wrl_planstatus — Choice (mirrors wrl_accountplan planstatus — denormalised)
-- wrl_ragstatus — Choice (1=Green, 2=Amber, 3=Red — denormalised)
-- wrl_requiresattention — Text (single line — the one urgent thing, denormalised)
-- wrl_plantarget — Currency (copied from active plan, denormalised)
-- wrl_actualrevenueytd — Currency (denormalised)
-- wrl_planprogress — Whole Number 0-100 (denormalised)
+**Filter syntax for lookups:** `_wrl_accountplan_value eq '${id}'` (underscore-wrap the logical name)
+**Bind syntax for lookups:** `wrl_AccountPlan@odata.bind` (use Schema Name)
 
 ---
 
-## Dataverse API Pattern
+### Account (logical: `account`)
+| Schema Name | Logical Name | Type |
+|---|---|---|
+| wrl_AccountTier | wrl_accounttier | picklist |
+| wrl_ActualRevenueYTD | wrl_actualrevenueytd | money |
+| wrl_PlanProgress | wrl_planprogress | int |
+| wrl_PlanStatus | wrl_planstatus | picklist |
+| wrl_PlanTarget | wrl_plantarget | money |
+| wrl_RagStatus | wrl_ragstatus | picklist |
+| wrl_RelationshipScore | wrl_relationshipscore | int |
+| wrl_RequiresAttention | wrl_requiresattention | nvarchar |
 
-All API calls use standard Dataverse Web API v9.2. The API object in account-planning-hub-v2.html shows the full pattern. Key things:
+---
 
-```javascript
-// Always use OData-EntityId header to get created record ID
-const location = res.headers.get('OData-EntityId');
-const match = location && location.match(/\(([^)]+)\)/);
-const newId = match ? match[1] : null;
+### Contact (logical: `contact`)
+| Schema Name | Logical Name | Type |
+|---|---|---|
+| wrl_EngagementLevel | wrl_engagementlevel | picklist |
 
-// Lookup binds use @odata.bind syntax
-'wrl_AccountPlan@odata.bind': `/wrl_accountplans(${planId})`
-'wrl_Account@odata.bind': `/accounts(${accountId})`
+---
 
-// Expand syntax for related records
-$expand=wrl_account($select=name,wrl_accounttier,wrl_ragstatus)
+### Account Plan (logical: `wrl_accountplan`)
+| Schema Name | Logical Name | Type | Notes |
+|---|---|---|---|
+| wrl_Account | wrl_account | lookup | Link to Account |
+| wrl_accountplanId | wrl_accountplanid | primarykey | PK |
+| wrl_actualrevenue | wrl_actualrevenue | money | Achieved YTD |
+| wrl_aiopeningstatement | wrl_aiopeningstatement | nvarchar | |
+| wrl_confirmationtimestamp | wrl_confirmationtimestamp | datetime | Set on Approve |
+| wrl_generatedtimestamp | wrl_generatedtimestamp | datetime | Set on Generate |
+| wrl_growthobjectives | wrl_growthobjectives | nvarchar | |
+| wrl_healthsummary | wrl_healthsummary | nvarchar | |
+| wrl_marketsegment | wrl_marketsegment | nvarchar | |
+| wrl_planintent | wrl_planintent | nvarchar | e.g. "cross-sell" |
+| wrl_planname | wrl_planname | nvarchar | |
+| wrl_planowneremail | wrl_planowneremail | nvarchar | |
+| wrl_planpayload | wrl_planpayload | nvarchar | Full JSON — source of truth |
+| wrl_planstatus | wrl_planstatus | picklist | 1=Draft, 2=Pending, 3=Active, 4=Archived |
+| wrl_plantype | wrl_plantype | picklist | 1=Cross-sell, 2=Upsell, 3=Retention, 4=Relationship |
+| wrl_revenuetarget | wrl_revenuetarget | money | = totalMid from pipeline calc |
 
-// Filter by lookup
-$filter=_wrl_AccountPlan_value eq '${planId}'
+---
+
+### Engagement Cadence (logical: `wrl_engagementcadence`)
+| Schema Name | Logical Name | Type | Notes |
+|---|---|---|---|
+| wrl_AccountPlan | wrl_accountplan | lookup | Link to Account Plan |
+| wrl_cadencename | wrl_cadencename | nvarchar | |
+| wrl_communicationchannel | wrl_communicationchannel | picklist | 1=Phone, 2=Online Meeting, 3=In-Person, 4=Email, 5=Other |
+| wrl_contactname | wrl_contactname | nvarchar | Contact name (text, not lookup) |
+| wrl_engagementcadenceId | wrl_engagementcadenceid | primarykey | PK |
+| wrl_frequency | wrl_frequency | picklist | 1=Weekly, 2=Biweekly, 3=Monthly, 4=Quarterly |
+| wrl_locationawareness | wrl_locationawareness | bit | True = remote contact |
+| wrl_manageradjustment | wrl_manageradjustment | bit | True = AM manually edited |
+| wrl_purpose | wrl_purpose | nvarchar | |
+| wrl_rationale | wrl_rationale | nvarchar | |
+| wrl_startdate | wrl_startdate | datetime | |
+| wrl_status | wrl_status | picklist | 1=Active, 2=Paused, 3=Completed |
+
+---
+
+### Action Plan (logical: `wrl_actionplan`)
+| Schema Name | Logical Name | Type | Notes |
+|---|---|---|---|
+| wrl_AccountPlan | wrl_accountplan | lookup | Link to Account Plan |
+| wrl_actiondescription | wrl_actiondescription | nvarchar | |
+| wrl_actionplanId | wrl_actionplanid | primarykey | PK |
+| wrl_communicationchannel | wrl_communicationchannel | picklist | Same choices as cadence |
+| wrl_currentstatus | wrl_currentstatus | picklist | 1=To Do, 2=In Progress, 3=Done |
+| wrl_prioritylevel | wrl_prioritylevel | picklist | 1=High, 2=Medium, 3=Low |
+| wrl_rationale | wrl_rationale | nvarchar | |
+| wrl_suggestedtiming | wrl_suggestedtiming | nvarchar | |
+
+---
+
+### Plan Recommendation (logical: `wrl_planrecommendation`, table schema: `wrl_PlanRecommendation`)
+| Schema Name | Logical Name | Type | Notes |
+|---|---|---|---|
+| wrl_AccountPlan | wrl_accountplan | lookup | Link to Account Plan |
+| wrl_Confidence | wrl_confidence | picklist | 1=High, 2=Medium, 3=Low |
+| wrl_ConfidenceReason | wrl_confidencereason | nvarchar | |
+| wrl_Description | wrl_description | ntext | |
+| wrl_EstimatedValue | wrl_estimatedvalue | money | |
+| wrl_Name | wrl_name | nvarchar | Required field |
+| wrl_Opportunity | wrl_opportunity | lookup | Link to native Opportunity (nullable) |
+| wrl_PlanRecommendationId | wrl_planrecommendationid | primarykey | PK |
+| wrl_ProductName | wrl_productname | nvarchar | |
+| wrl_Rationale | wrl_rationale | ntext | |
+| wrl_RecommendationType | wrl_recommendationtype | picklist | 1=Cross-sell, 2=Upsell, 3=Retention, 4=Relationship |
+| wrl_SortOrder | wrl_sortorder | int | 1=highest priority |
+
+---
+
+### Conversation Message (logical: `wrl_conversationmessage`)
+| Schema Name | Logical Name | Type | Notes |
+|---|---|---|---|
+| wrl_AccountPlan | wrl_accountplan | lookup | Link to Account Plan |
+| wrl_conversationmessageId | wrl_conversationmessageid | primarykey | PK |
+| wrl_messagecontent | wrl_messagecontent | nvarchar | |
+| wrl_messagesequence | wrl_messagesequence | int | Ordering |
+| wrl_messagetimestamp | wrl_messagetimestamp | datetime | |
+| wrl_planidentifier | wrl_planidentifier | nvarchar | Legacy text link — prefer wrl_AccountPlan lookup |
+| wrl_userrole | wrl_userrole | picklist | 1=User, 2=Assistant |
+
+---
+
+### Business Signal (logical: `wrl_businesssignal`)
+| Schema Name | Logical Name | Type | Notes |
+|---|---|---|---|
+| wrl_Account | wrl_account | lookup | Link to Account (NOT plan) |
+| wrl_AccountPlan | wrl_accountplan | lookup | Optional link to plan |
+| wrl_businesssignalId | wrl_businesssignalid | primarykey | PK |
+| wrl_recordcreatedon | wrl_recordcreatedon | datetime | |
+| wrl_sentimentstatus | wrl_sentimentstatus | picklist | 1=Positive, 2=Neutral, 3=Risk |
+| wrl_signalcategory | wrl_signalcategory | picklist | 1=Renewal, 2=Expansion, 3=Risk, 4=Engagement, 5=Market |
+| wrl_signalpayload | wrl_signalpayload | nvarchar | Full signal JSON |
+| wrl_signalsummary | wrl_signalsummary | nvarchar | |
+| wrl_signaltimestamp | wrl_signaltimestamp | datetime | |
+| wrl_sourcesystem | wrl_sourcesystem | picklist | 1=CRM, 2=ERP, 3=Email, 4=Other |
+
+---
+
+### Marketing Touchpoint (logical: `wrl_marketingtouchpoint`)
+| Schema Name | Logical Name | Type | Notes |
+|---|---|---|---|
+| wrl_engagementlevel | wrl_engagementlevel | picklist | 1=High, 2=Medium, 3=Low |
+| wrl_marketingtouchpointId | wrl_marketingtouchpointid | primarykey | PK |
+| wrl_recordcreatedon | wrl_recordcreatedon | datetime | |
+| wrl_touchpointdatetime | wrl_touchpointdatetime | datetime | |
+| wrl_touchpointsummary | wrl_touchpointsummary | nvarchar | |
+| wrl_touchpointtype | wrl_touchpointtype | picklist | |
+
+---
+
+### Intent Prompt (logical: `wrl_intentprompt`, table schema: `wrl_IntentPrompt`)
+| Schema Name | Logical Name | Type | Notes |
+|---|---|---|---|
+| wrl_IntentPromptId | wrl_intentpromptid | primarykey | PK |
+| wrl_IntentType | wrl_intenttype | nvarchar | e.g. "cross-sell" — used to look up correct prompt |
+| wrl_SystemPrompt | wrl_systemprompt | ntext | Full system prompt text — read by plugin at runtime |
+
+**Plugin reads system prompt at runtime:**
+```csharp
+// Query wrl_intentprompt where wrl_intenttype = planIntent
+var query = new QueryExpression("wrl_intentprompt") {
+    ColumnSet = new ColumnSet("wrl_systemprompt")
+};
+query.Criteria.AddCondition("wrl_intenttype", ConditionOperator.Equal, planIntent);
+var results = service.RetrieveMultiple(query);
+var systemPrompt = results.Entities.FirstOrDefault()?["wrl_systemprompt"]?.ToString();
 ```
 
 ---
 
-## The AccordIn Hub Web Resource
+### Lookup field API patterns (critical — get these right)
+```
+// Filter by lookup (use logical name with underscore wrap)
+$filter=_wrl_accountplan_value eq '${planId}'
 
-File: power-platform/web-resources/accordin-hub/account-planning-hub-v2.html
+// Bind lookup on create/update (use Schema Name with @odata.bind)
+"wrl_AccountPlan@odata.bind": "/wrl_accountplans(${planId})"
+"wrl_Account@odata.bind": "/accounts(${accountId})"
+"wrl_Opportunity@odata.bind": "/opportunities(${opportunityId})"
 
-This is a single-file HTML web resource deployed to D365 Sales Hub as a dedicated area. It:
-- Auto-detects D365 context via `typeof Xrm !== 'undefined'`
-- In D365: calls Dataverse Web API directly (inherits session auth)
-- Standalone: uses MOCK_ACCOUNTS and MOCK_PLAN data
-- Three-column plan canvas: left (summary), middle (intelligence), right (copilot chat)
-- Contact engagement section with planRole badges and coverage gap warning
-
-**Do not refactor into multiple files.** D365 web resources work best as single files. If complexity grows, move to a PCF component instead (that is a separate build pipeline).
-
----
-
-## Copilot Service — Key Files
-
-### copilot-service/src/routes/run.js
-The most important file in the service layer. Do not change the core logic without understanding the architecture decisions above.
-
-Flow:
-1. Load scenario data
-2. calculatePipeline() — pre-calculate exactTotal, weightedTotal, totalLow, totalHigh
-3. enrichContacts() — derive suggestedPlanRole for each contact
-4. Strip individual opportunity values from JSON sent to model
-5. Build user message with pre-calculated facts injected
-6. Call model
-7. Post-process: overwrite revenue figures with verified values
-8. Post-process: fix hasCadence based on actual cadences array
-9. Return to client
-
-### copilot-service/test-data/cross-sell/system-prompt.txt
-The current system prompt for cross-sell intent. ~2700 tokens with 5 compact few-shot examples covering: rich data with strategic contact, new account, dormant account, conflicting signals, cold account.
+// C# plugin — always use logical name (lowercase)
+entity["wrl_accountplan"] = new EntityReference("wrl_accountplan", planId);
+entity["wrl_cadencename"] = "Strategic Review";
+entity["wrl_prioritylevel"] = new OptionSetValue(1); // 1=High
+```
 
 ---
 
@@ -267,68 +384,66 @@ The current system prompt for cross-sell intent. ~2700 tokens with 5 compact few
 - API version: 2024-12-01-preview
 - Base model deployment: gpt-4o (gpt-4o-2024-08-06)
 - Fine-tuned deployment: gpt-4o-2024-08-06-v2
-- Fine-tuning job ID: ftjob-0ecbaac4f898421cbd89b1797189baa2
-- Fine-tuning suffix: acc_plan_ft
 
-Environment variables in copilot-service/.env:
-```
-AZURE_OPENAI_ENDPOINT=https://wahaj-mms8e7cm-eastus2.cognitiveservices.azure.com/
-AZURE_OPENAI_API_KEY=<key>
-AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o-2024-08-06-v2
-AZURE_OPENAI_API_VERSION=2024-12-01-preview
-PORT=3001
-```
+D365 Environment Variables (read by plugin at runtime):
+- accordin_AzureOpenAIKey — Secret — Azure OpenAI API key
+- accordin_AzureOpenAIEndpoint — Text — https://wahaj-mms8e7cm-eastus2.cognitiveservices.azure.com/
+- accordin_ModelDeployment — Text — gpt-4o-2024-08-06-v2
 
 ---
 
-## What is Built vs What is Next
+## Current State
 
 ### Built and working
-- Cross-sell intent: system prompt, few-shot examples, pipeline pre-calculation, contact enrichment
-- AccordIn Hub v2: full hub list view + plan canvas + chat (mock data)
-- Fine-tuned model v2 (16 training examples)
-- Dataverse schema (minus wrl_planrecommendation which needs creating)
-- React evaluation app (prototype only — not for production)
+- C# plugin assembly (AccordIn.Plugin) — fully implemented and registered in D365
+- Custom APIs registered: accordin_GeneratePlan, accordin_RefinePlan
+- All Dataverse tables created including wrl_PlanRecommendation
+- All Account custom fields created (wrl_AccountTier, wrl_RagStatus, wrl_RelationshipScore etc)
+- D365 Environment Variables created (wrl_accordin_AzureOpenAIKey, wrl_accordin_AzureOpenAIEndpoint, wrl_accordin_ModelDeployment, wrl_accordin_AzureOpenAIApiVersion)
+- wrl_IntentPrompt table exists — plugin reads system prompt from here at runtime
+- AccordIn Hub v2 deployed as web resource — connected to real Dataverse data
+- First end-to-end plan generation working — Apple Global Logistics test account
+- Fine-tuned model v2 (gpt-4o-2024-08-06-v2) deployed in Azure East US 2
+- AccordIn Hub area added to D365 Sales Hub sitemap
 
-### Not built yet (in priority order)
-1. wrl_planrecommendation table in D365
-2. Account custom fields (wrl_accounttier, wrl_ragstatus etc) in D365
-3. AccordIn Hub deployed as D365 web resource with real Dataverse data
-4. Power Automate flow to collect account data and call copilot service
-5. Azure Function wrapping the copilot service (replacing Node.js Express)
-6. Plan writeback: save generated plan + child records to Dataverse
-7. Upsell, retention, and relationship intents
-8. RAG layer for dynamic industry knowledge
-9. PCF component for the plan canvas (replaces HTML web resource eventually)
+### In progress
+- AccordIn Hub v3 — revised layout (Situation left panel, Plan/Contacts tabs right, collapsible copilot, contact strip, dynamic quick prompts)
+- Pipeline calculator stage name matching — imported opportunities may not match expected stage names exactly
+
+### Known issues to fix
+- Stage names in D365 opportunities must match exactly: Negotiation, Propose, Qualify, Discovery (case-sensitive in PipelineCalculator.cs lookup)
+- totalLow showing £0 when caused by stage name mismatch — no Negotiation stage opportunities found
+- System prompt must enforce JSON-only output explicitly — base gpt-4o returns markdown without fine-tuning guidance
 
 ---
 
-## Coding Principles — Always Follow These
+## Coding Principles
 
-- The model should carry the intelligence. Do not compensate for model weaknesses with backend engineering workarounds.
-- Fine-tuning is for structural consistency. RAG is for dynamic knowledge. These are not interchangeable.
-- Pipeline totals are always pre-calculated in the backend and post-processed after the model responds. Never trust the model's arithmetic.
+- The model carries the intelligence. Do not compensate for model weaknesses with engineering workarounds.
+- Pipeline totals are always pre-calculated before the model call and post-processed after. Never trust model arithmetic.
 - The plan payload JSON is the source of truth. Structured columns in Dataverse are denormalised for reporting only.
-- Every rationale in the plan must cite a specific date, contact name, or signal from the account data. No generic phrases.
-- The web resource is a single HTML file. Do not split into multiple files unless moving to PCF.
+- hasCadence is always computed post-model by cross-checking the cadences array. Never trust model self-reporting.
+- Azure OpenAI credentials live in D365 Environment Variables. Never hardcode them.
+- The web resource is a single HTML file. Do not split into multiple files.
+- Use Custom APIs for synchronous operations. Use flows only for event-driven triggers.
 
 ---
 
 ## Naming Conventions
 
-- Product name: AccordIn (capital A, capital I)
+- Product: AccordIn (capital A, capital I)
 - Table prefix: wrl_
-- Lookup field casing in API calls: wrl_AccountPlan (camelCase with capital for entity name)
-- Filter syntax for lookups: _wrl_AccountPlan_value (underscore prefix and suffix)
+- Lookup API casing: wrl_AccountPlan (capital for entity name portion)
+- Filter syntax: _wrl_AccountPlan_value
+- C# namespace: AccordIn.Plugin
 - Branch naming: feature/description, fix/description
-- Commit format: feat: description / fix: description / refactor: description
+- Commit format: feat: / fix: / refactor: / docs:
 
 ---
 
 ## GT Visa Evidence Notes
 
-This project is evidence for Wahaj Rashid's UK Global Talent Visa (Exceptional Promise, Digital Technology). Key innovations to highlight in any documentation:
-
+This project is evidence for Wahaj Rashid's UK Global Talent Visa (Exceptional Promise, Digital Technology). Key innovations:
 1. Pre-calculated pipeline injection — LLM reasons, never computes
 2. Stage-weighted forecasting (Discovery 20%, Qualify 40%, Propose 65%, Negotiation 85%)
 3. Primary relationship contact intelligence via fine-tuned model
@@ -338,4 +453,4 @@ This project is evidence for Wahaj Rashid's UK Global Talent Visa (Exceptional P
 7. Fine-tuned GPT-4o on enterprise account planning patterns
 8. Whitespace discipline — pipeline opportunities are never whitespace
 
-All work is attributed to Wahaj Rashid personally. Visionet Systems is the employer context but the innovations are Wahaj's independent technical contribution.
+All work attributed to Wahaj Rashid personally.
