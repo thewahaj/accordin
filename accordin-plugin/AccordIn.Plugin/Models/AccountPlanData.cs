@@ -114,6 +114,9 @@ namespace AccordIn.Plugin.Models
 
     public class Contact
     {
+        [JsonIgnore]
+        public System.Guid ContactId { get; set; }
+
         [JsonProperty("name")]
         public string Name { get; set; }
 

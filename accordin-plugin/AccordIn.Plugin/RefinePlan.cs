@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
+using System.Text;
+using System.Text.Json;
+using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using Newtonsoft.Json;
@@ -10,77 +11,18 @@ using AccordIn.Plugin.Services;
 
 namespace AccordIn.Plugin
 {
-    /// <summary>
-    /// D365 plugin bound to the accordin_RefinePlan custom action.
-    ///
-    /// Handles conversational refinement of an existing plan. On each turn:
-    ///   1. Loads wrl_accountplan header (payload + account ref + plan type)
-    ///   2. Loads wrl_conversationmessage history for this plan
-    ///   3. Builds message list: system prompt + suffix → original plan → history → new user message
-    ///   4. Calls the model (2500 tokens — chat mode)
-    ///   5. If response contains [PLAN_UPDATE]: extracts JSON, post-processes, updates plan + child records
-    ///   6. Saves user + assistant messages to wrl_conversationmessage
-    ///   7. Returns explanation text and IsPlanUpdate flag to the caller
-    ///
-    /// Input parameters:
-    ///   PlanId       (String)  — GUID of the wrl_accountplan to refine — required
-    ///   UserMessage  (String)  — the AM's chat message — required
-    ///
-    /// Output parameters:
-    ///   ResponseMessage  (String)   — plain-English response shown in the chat UI
-    ///   IsPlanUpdate     (Boolean)  — true when the model returned an updated plan JSON
-    /// </summary>
     public class RefinePlan : IPlugin
     {
-        // Injected into the system message on the first chat turn — port of CONVERSATION_SYSTEM_SUFFIX
-        // in copilot-service/src/routes/chat.js. Kept verbatim so model behaviour is identical.
-        private const string ConversationSystemSuffix = @"
-
-You are now in conversation mode helping an account manager refine their account plan.
-
-CRITICAL RESPONSE RULES - follow these exactly:
-
-RULE 1 - WHEN THE MANAGER ASKS FOR A CHANGE TO THE PLAN:
-Any request that modifies cadences, recommendations, actions, revenue targets, or any other plan field
-MUST return a response in this exact format with no deviation:
-
-[PLAN_UPDATE]
-{complete updated JSON plan object}
-[END_PLAN]
-
-After [END_PLAN] you may add a brief plain English explanation (max 2 sentences) of what changed and any trade-offs.
-
-RULE 2 - WHEN THE MANAGER ASKS A QUESTION OR REQUESTS REASONING:
-Respond in plain conversational English only. No JSON. Max 150 words.
-Always reference specific data from the account when explaining. Never answer generically.
-
-RULE 3 - HOW TO IDENTIFY A CHANGE REQUEST vs A QUESTION:
-Change requests use words like: change, update, modify, reduce, increase, remove, add, make it, set it, switch
-Questions use words like: why, what, how, explain, tell me, is this, should we
-
-RULE 4 - THE JSON IN A PLAN UPDATE:
-Must be the complete plan object - not just the changed section.
-Must follow the exact same schema as the original plan response.
-Must preserve all unchanged fields from the current plan.
-
-RULE 5 - WHITESPACE AND TERMINOLOGY:
-When asked about whitespace, revenue potential, pipeline, or any business term,
-always answer in context of THIS specific account's data.
-Never give a generic textbook definition.";
-
-        // Maximum total messages sent to the model including the system message
-        private const int MessageHistoryCap = 20;
-
         public void Execute(IServiceProvider serviceProvider)
         {
-            var context        = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
-            var tracer         = (ITracingService)serviceProvider.GetService(typeof(ITracingService));
+            var context = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
             var serviceFactory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
-            var svc            = serviceFactory.CreateOrganizationService(context.InitiatingUserId);
+            var service = serviceFactory.CreateOrganizationService(context.UserId);
+            var tracingService = (ITracingService)serviceProvider.GetService(typeof(ITracingService));
 
             try
             {
-                Run(context, svc, tracer);
+                Run(context, service, tracingService);
             }
             catch (InvalidPluginExecutionException)
             {
@@ -88,366 +30,191 @@ Never give a generic textbook definition.";
             }
             catch (Exception ex)
             {
-                tracer?.Trace($"[AccordIn] RefinePlan unhandled exception: {ex}");
+                tracingService?.Trace($"[AccordIn] RefinePlan unhandled exception: {ex}");
                 throw new InvalidPluginExecutionException($"AccordIn RefinePlan failed: {ex.Message}", ex);
             }
         }
 
         private static void Run(
             IPluginExecutionContext context,
-            IOrganizationService    svc,
-            ITracingService         tracer)
+            IOrganizationService service,
+            ITracingService tracingService)
         {
-            // ------------------------------------------------------------------
-            // 1. Input parameters
-            // ------------------------------------------------------------------
-            var planId      = ReadPlanId(context);
-            var userMessage = ReadRequiredString(context, "UserMessage");
+            var planId = ReadPlanId(context);
+            var userMessage = ReadOptionalString(context, "UserMessage", null);
+            var actionType = ReadOptionalString(context, "ActionType", "refine");
 
-            tracer?.Trace($"[AccordIn] RefinePlan — plan {planId}");
+            var endpoint = GetEnvironmentVariable(service, "wrl_accordin_AzureOpenAIEndpoint");
+            var apiKey = GetEnvironmentVariable(service, "wrl_accordin_AzureOpenAIKey");
+            var mainDeployment = GetEnvironmentVariable(service, "wrl_accordin_ModelDeployment");
+            var classifierDeployment = GetOptionalEnvironmentVariable(service, "wrl_accordin_ClassifierModelDeployment") ?? mainDeployment;
+            var apiVersion = GetEnvironmentVariable(service, "wrl_accordin_AzureOpenAIApiVersion");
 
-            // ------------------------------------------------------------------
-            // 2. Load plan header
-            // ------------------------------------------------------------------
-            var planRecord = LoadPlan(svc, planId);
+            tracingService?.Trace($"[AccordIn] RefinePlan - plan {planId}, actionType '{actionType}'");
 
-            // ------------------------------------------------------------------
-            // 3. Load system prompt from wrl_intentprompt, append conversation suffix
-            // ------------------------------------------------------------------
-            var systemPrompt = ReadSystemPrompt(svc, planRecord.PlanType) + ConversationSystemSuffix;
-
-            // ------------------------------------------------------------------
-            // 4. Load conversation history
-            // ------------------------------------------------------------------
-            var history     = LoadConversationHistory(svc, planId);
-            var nextSeq     = history.Count > 0 ? history.Max(h => h.Sequence) + 1 : 1;
-
-            tracer?.Trace($"[AccordIn] Loaded {history.Count} prior conversation messages");
-
-            // ------------------------------------------------------------------
-            // 5. Build capped message list for the model call
-            //    System → plan payload (as assistant context) → history → new user turn
-            // ------------------------------------------------------------------
-            var messages = BuildMessages(systemPrompt, planRecord.Payload, history, userMessage);
-
-            // ------------------------------------------------------------------
-            // 6. Call model in chat mode (2500 tokens)
-            // ------------------------------------------------------------------
-            var aiClient = AzureOpenAIClient.FromEnvironmentVariables(svc, tracer);
-            var rawText  = aiClient.Call(messages, maxTokens: 2500);
-
-            // ------------------------------------------------------------------
-            // 7. Detect and handle plan update
-            // ------------------------------------------------------------------
-            var isPlanUpdate    = rawText.Contains("[PLAN_UPDATE]");
-            var responseMessage = rawText;
-
-            if (isPlanUpdate)
+            if (string.Equals(actionType, "approve", StringComparison.OrdinalIgnoreCase))
             {
-                tracer?.Trace("[AccordIn] Plan update detected — extracting JSON");
-                responseMessage = ApplyPlanUpdate(svc, tracer, planId, planRecord.AccountId, rawText);
-
-                // If extraction/parsing failed, ApplyPlanUpdate returns the raw text as message
-                // and isPlanUpdate remains true so the UI knows to refresh
-            }
-
-            // ------------------------------------------------------------------
-            // 8. Persist conversation turn to Dataverse
-            //    Store raw model response (not just explanation) so future turns
-            //    have full context of what the model said
-            // ------------------------------------------------------------------
-            SaveMessage(svc, planId, role: 1, content: userMessage,        sequence: nextSeq);
-            SaveMessage(svc, planId, role: 2, content: rawText,            sequence: nextSeq + 1);
-
-            tracer?.Trace($"[AccordIn] Saved conversation messages {nextSeq} and {nextSeq + 1}");
-
-            // ------------------------------------------------------------------
-            // 9. Output parameters
-            // ------------------------------------------------------------------
-            context.OutputParameters["ResponseMessage"] = responseMessage;
-            context.OutputParameters["IsPlanUpdate"]    = isPlanUpdate;
-        }
-
-        // -----------------------------------------------------------------------------------------
-        // Plan update — extract JSON, post-process, persist
-        // -----------------------------------------------------------------------------------------
-
-        /// <summary>
-        /// Extracts the updated plan JSON from the model response, applies post-processing,
-        /// and calls PlanSaver.UpdatePlan. Returns the plain-English explanation to show the AM.
-        /// Returns the raw response on any failure so the turn is never silently dropped.
-        /// </summary>
-        private static string ApplyPlanUpdate(
-            IOrganizationService svc,
-            ITracingService      tracer,
-            Guid                 planId,
-            Guid                 accountId,
-            string               rawText)
-        {
-            var extracted = ExtractPlanJson(rawText);
-            if (extracted == null)
-            {
-                tracer?.Trace("[AccordIn] Could not extract JSON from plan update response");
-                return rawText;
-            }
-
-            var parseResult = AzureOpenAIClient.ParseResponse(extracted.JsonText);
-            if (!parseResult.Success)
-            {
-                tracer?.Trace($"[AccordIn] Plan update parse error: {parseResult.ParseError}");
-                return rawText;
-            }
-
-            var updatedPlan = parseResult.Parsed;
-
-            // Re-run pipeline calculator so revenue post-processing uses current Dataverse data
-            var opportunities = LoadOpportunitiesForPipeline(svc, accountId);
-            var pipeline      = new PipelineCalculator().Calculate(opportunities);
-
-            PostProcessRevenue(updatedPlan, pipeline);
-            PostProcessHasCadence(updatedPlan);
-
-            var saver = new PlanSaver(svc, tracer);
-            saver.UpdatePlan(planId, updatedPlan, pipeline);
-
-            tracer?.Trace($"[AccordIn] Plan {planId} updated via chat refinement");
-
-            return string.IsNullOrWhiteSpace(extracted.Explanation) ? "Plan updated." : extracted.Explanation;
-        }
-
-        // -----------------------------------------------------------------------------------------
-        // Message list construction
-        // -----------------------------------------------------------------------------------------
-
-        private static IList<ChatMessage> BuildMessages(
-            string                    systemPrompt,
-            string                    planPayload,
-            IList<ConversationRecord> history,
-            string                    newUserMessage)
-        {
-            var all = new List<ChatMessage>
-            {
-                new ChatMessage { Role = "system", Content = systemPrompt },
-                // Original plan JSON as the first assistant turn — gives the model full context
-                // of what it generated without needing the original (very long) user message
-                new ChatMessage { Role = "assistant", Content = planPayload },
-            };
-
-            foreach (var h in history)
-                all.Add(new ChatMessage { Role = h.Role, Content = h.Content });
-
-            all.Add(new ChatMessage { Role = "user", Content = newUserMessage });
-
-            // Cap to MessageHistoryCap total, always keeping the system message at index 0
-            if (all.Count > MessageHistoryCap)
-            {
-                var systemMessage = all[0];
-                var trimmed       = all.Skip(all.Count - (MessageHistoryCap - 1)).ToList();
-                trimmed.Insert(0, systemMessage);
-                return trimmed;
-            }
-
-            return all;
-        }
-
-        // -----------------------------------------------------------------------------------------
-        // [PLAN_UPDATE] extraction — port of extractPlanJson() in chat.js
-        // -----------------------------------------------------------------------------------------
-
-        private static ExtractedPlan ExtractPlanJson(string rawText)
-        {
-            // Strategy 1: [PLAN_UPDATE] ... [END_PLAN]
-            var markerMatch = Regex.Match(rawText, @"\[PLAN_UPDATE\]([\s\S]*?)\[END_PLAN\]");
-            if (markerMatch.Success)
-            {
-                var jsonText    = markerMatch.Groups[1].Value.Trim();
-                var explanation = rawText.Replace(markerMatch.Value, string.Empty).Trim();
-                return new ExtractedPlan { JsonText = jsonText, Explanation = explanation };
-            }
-
-            // Strategy 2: [PLAN_UPDATE] followed by JSON, no end marker
-            var legacyIdx = rawText.IndexOf("[PLAN_UPDATE]", StringComparison.Ordinal);
-            if (legacyIdx >= 0)
-            {
-                var remainder = rawText.Substring(legacyIdx + "[PLAN_UPDATE]".Length).Trim();
-                var jsonStart = remainder.IndexOf('{');
-                var jsonEnd   = remainder.LastIndexOf('}');
-                if (jsonStart >= 0 && jsonEnd > jsonStart)
+                var approveEntity = new Entity("wrl_accountplan", planId)
                 {
-                    return new ExtractedPlan
-                    {
-                        JsonText    = remainder.Substring(jsonStart, jsonEnd - jsonStart + 1),
-                        Explanation = remainder.Substring(jsonEnd + 1).Trim(),
-                    };
-                }
-            }
-
-            // Strategy 3: last resort — any large JSON object in the response (>200 chars)
-            var start = rawText.IndexOf('{');
-            var end   = rawText.LastIndexOf('}');
-            if (start >= 0 && end > start && end - start > 200)
-            {
-                return new ExtractedPlan
-                {
-                    JsonText    = rawText.Substring(start, end - start + 1),
-                    Explanation = rawText.Substring(0, start).Replace("[PLAN_UPDATE]", string.Empty).Trim(),
+                    ["wrl_planstatus"] = new OptionSetValue(3),
+                    ["wrl_confirmationtimestamp"] = DateTime.UtcNow
                 };
+
+                service.Update(approveEntity);
+                context.OutputParameters["ResponseMessage"] = "Plan approved. Status updated to Active.";
+                context.OutputParameters["IsPlanUpdate"] = false;
+                return;
             }
 
-            return null;
-        }
+            if (string.IsNullOrWhiteSpace(userMessage))
+                throw new InvalidPluginExecutionException("UserMessage is required for refinement.");
 
-        // -----------------------------------------------------------------------------------------
-        // Post-processing — identical logic to GeneratePlan (CLAUDE.md §1, §3)
-        // -----------------------------------------------------------------------------------------
+            var planRecord = service.Retrieve("wrl_accountplan", planId, new ColumnSet(
+                "wrl_planpayload",
+                "wrl_aiopeningstatement",
+                "wrl_healthsummary",
+                "wrl_growthobjectives",
+                "wrl_revenuetarget"));
+            var planPayloadJson = planRecord.GetAttributeValue<string>("wrl_planpayload");
 
-        private static void PostProcessRevenue(PlanResponse plan, PipelineResult pipeline)
-        {
-            if (plan.RevenuePicture != null)
+            if (string.IsNullOrWhiteSpace(planPayloadJson))
+                throw new InvalidPluginExecutionException("Plan payload is empty. Regenerate the plan first.");
+
+            var plan = JsonConvert.DeserializeObject<PlanResponse>(planPayloadJson);
+            if (plan == null)
+                throw new InvalidPluginExecutionException("Plan payload could not be parsed.");
+
+            var planContext = BuildPlanContext(plan);
+            var classifierPrompt = GetIntentPrompt(service, tracingService, "classify-intent", GetDefaultClassifierPrompt());
+
+            tracingService?.Trace("[AccordIn] RefinePlan - classifying intent");
+            var classifier = new IntentClassifier(endpoint, apiKey, classifierDeployment, apiVersion);
+            var intent = classifier.Classify(userMessage, planContext, classifierPrompt) ?? new IntentResult
             {
-                plan.RevenuePicture.PipelineValue = pipeline.ExactTotal;
-                plan.RevenuePicture.TotalLow      = pipeline.TotalLow;
-                plan.RevenuePicture.TotalMid      = pipeline.WeightedTotal;
-                plan.RevenuePicture.TotalHigh     = pipeline.TotalHigh;
-            }
-
-            plan.RevenueTarget = pipeline.WeightedTotal;
-        }
-
-        private static void PostProcessHasCadence(PlanResponse plan)
-        {
-            if (plan.ContactEngagement == null || plan.Cadences == null) return;
-
-            var cadenceTitles = plan.Cadences
-                .Where(c => c?.ContactTitle != null)
-                .Select(c => c.ContactTitle.ToLowerInvariant().Trim())
-                .ToList();
-
-            foreach (var ce in plan.ContactEngagement)
-            {
-                if (ce == null) continue;
-                ce.HasCadence = cadenceTitles.Contains((ce.Title ?? string.Empty).ToLowerInvariant().Trim());
-            }
-        }
-
-        // -----------------------------------------------------------------------------------------
-        // Dataverse reads
-        // -----------------------------------------------------------------------------------------
-
-        private static PlanRecord LoadPlan(IOrganizationService svc, Guid planId)
-        {
-            var entity = svc.Retrieve("wrl_accountplan", planId,
-                new ColumnSet("wrl_planpayload", "wrl_plantype", "wrl_account"));
-
-            var accountRef = entity.GetAttributeValue<EntityReference>("wrl_account");
-            if (accountRef == null)
-                throw new InvalidPluginExecutionException(
-                    $"AccordIn RefinePlan: plan {planId} has no linked account.");
-
-            // wrl_plantype OptionSet int → string label for env var routing
-            var planTypeInt = entity.GetAttributeValue<OptionSetValue>("wrl_plantype")?.Value ?? 1;
-            var planType    = MapPlanTypeIntToString(planTypeInt);
-
-            var payload = entity.GetAttributeValue<string>("wrl_planpayload");
-            if (string.IsNullOrWhiteSpace(payload))
-                throw new InvalidPluginExecutionException(
-                    $"AccordIn RefinePlan: plan {planId} has no payload (wrl_planpayload is empty). " +
-                    "The plan must be generated before it can be refined.");
-
-            return new PlanRecord
-            {
-                AccountId = accountRef.Id,
-                PlanType  = planType,
-                Payload   = payload,
+                Action = "query",
+                Response = "I could not understand that request."
             };
+
+            tracingService?.Trace($"[AccordIn] Intent classified as '{intent.Action}' for target '{intent.TargetId}'");
+
+            var refineExecutor = new RefineExecutor(service, tracingService);
+            var outcome = refineExecutor.Execute(planId, plan, planPayloadJson, userMessage, intent, endpoint, apiKey, mainDeployment, apiVersion);
+
+            context.OutputParameters["ResponseMessage"] = outcome.ResponseMessage;
+            context.OutputParameters["IsPlanUpdate"] = outcome.IsPlanUpdate;
         }
 
-        private static IList<ConversationRecord> LoadConversationHistory(IOrganizationService svc, Guid planId)
+        private static PlanContext BuildPlanContext(PlanResponse plan)
         {
-            var query = new QueryExpression("wrl_conversationmessage")
+            var ctx = new PlanContext();
+
+            foreach (var cadence in plan.Cadences ?? new List<Cadence>())
             {
-                ColumnSet = new ColumnSet("wrl_messagecontent", "wrl_userrole", "wrl_messagesequence"),
-                Criteria  = new FilterExpression
+                ctx.Cadences.Add(new CadenceContext
+                {
+                    D365Id = cadence.D365Id,
+                    ContactName = cadence.ContactName ?? cadence.ContactTitle,
+                    Name = cadence.Name,
+                    Frequency = cadence.Frequency,
+                    Channel = cadence.Channel,
+                    Purpose = cadence.Purpose
+                });
+            }
+
+            foreach (var action in plan.OneOffActions ?? new List<OneOffAction>())
+            {
+                ctx.Actions.Add(new ActionContext
+                {
+                    D365Id = action.D365Id,
+                    Description = action.Description,
+                    Priority = action.Priority,
+                    Channel = action.Channel,
+                    SuggestedTiming = action.SuggestedTiming
+                });
+            }
+
+            foreach (var recommendation in plan.Recommendations ?? new List<Recommendation>())
+            {
+                ctx.Recommendations.Add(new RecommendationContext
+                {
+                    D365Id = recommendation.D365Id,
+                    ProductName = recommendation.ProductName,
+                    Confidence = recommendation.Confidence,
+                    EstimatedValue = (double)recommendation.EstimatedValue
+                });
+            }
+
+            foreach (var contact in plan.ContactEngagement ?? new List<ContactEngagementItem>())
+            {
+                ctx.Contacts.Add(new ContactContext
+                {
+                    D365ContactId = contact.D365ContactId,
+                    Name = contact.Name,
+                    PlanRole = contact.PlanRole
+                });
+            }
+
+            return ctx;
+        }
+
+        private static string GetIntentPrompt(
+            IOrganizationService service,
+            ITracingService tracingService,
+            string intentType,
+            string fallback)
+        {
+            var query = new QueryExpression("wrl_intentprompt")
+            {
+                ColumnSet = new ColumnSet("wrl_systemprompt"),
+                Criteria = new FilterExpression
                 {
                     Conditions =
                     {
-                        new ConditionExpression("wrl_accountplan", ConditionOperator.Equal, planId)
+                        new ConditionExpression("wrl_intenttype", ConditionOperator.Equal, intentType)
                     }
                 },
-                Orders = { new OrderExpression("wrl_messagesequence", OrderType.Ascending) }
+                TopCount = 1
             };
 
-            return svc.RetrieveMultiple(query).Entities
-                .Select(e =>
-                {
-                    var roleInt = e.GetAttributeValue<OptionSetValue>("wrl_userrole")?.Value ?? 1;
-                    return new ConversationRecord
-                    {
-                        Sequence = e.GetAttributeValue<int?>("wrl_messagesequence") ?? 0,
-                        Role     = roleInt == 2 ? "assistant" : "user",
-                        Content  = e.GetAttributeValue<string>("wrl_messagecontent") ?? string.Empty,
-                    };
-                })
-                .ToList();
-        }
-
-        /// <summary>
-        /// Lightweight opportunity fetch for pipeline recalculation during a plan update.
-        /// Only reads the fields PipelineCalculator needs — avoids a full DataCollector.Collect().
-        /// </summary>
-        private static IList<Opportunity> LoadOpportunitiesForPipeline(IOrganizationService svc, Guid accountId)
-        {
-            var query = new QueryExpression("opportunity")
+            var results = service.RetrieveMultiple(query).Entities;
+            if (results.Count == 0)
             {
-                ColumnSet = new ColumnSet("name", "stepname", "estimatedvalue", "estimatedclosedate", "statecode"),
-                Criteria  = new FilterExpression
-                {
-                    Conditions =
-                    {
-                        new ConditionExpression("parentaccountid", ConditionOperator.Equal, accountId)
-                    }
-                }
-            };
+                tracingService?.Trace($"[AccordIn] No intent prompt found for '{intentType}', using fallback");
+                return fallback;
+            }
 
-            return svc.RetrieveMultiple(query).Entities
-                .Select(e =>
-                {
-                    var stateCode = e.GetAttributeValue<OptionSetValue>("statecode")?.Value ?? 0;
-                    var closeDate = e.GetAttributeValue<DateTime?>("estimatedclosedate");
-                    return new Opportunity
-                    {
-                        Name      = e.GetAttributeValue<string>("name"),
-                        Stage     = e.GetAttributeValue<string>("stepname") ?? "Discovery",
-                        Value     = e.GetAttributeValue<Money>("estimatedvalue")?.Value ?? 0m,
-                        CloseDate = closeDate.HasValue ? closeDate.Value.ToString("yyyy-MM-dd") : null,
-                        Status    = stateCode == 1 ? "Won" : stateCode == 2 ? "Lost" : "Open",
-                    };
-                })
-                .ToList();
-        }
+            var prompt = results[0].GetAttributeValue<string>("wrl_systemprompt");
+            if (!string.IsNullOrWhiteSpace(prompt))
+                return prompt.Trim();
 
-        private static void SaveMessage(
-            IOrganizationService svc,
-            Guid                 planId,
-            int                  role,        // 1=User, 2=Assistant
-            string               content,
-            int                  sequence)
-        {
-            var entity = new Entity("wrl_conversationmessage")
+            try
             {
-                ["wrl_AccountPlan"]      = new EntityReference("wrl_accountplan", planId),
-                ["wrl_messagecontent"]   = content,
-                ["wrl_userrole"]         = new OptionSetValue(role),
-                ["wrl_messagetimestamp"] = DateTime.UtcNow,
-                ["wrl_messagesequence"]  = sequence,
-            };
+                var initResponse = (InitializeFileBlocksDownloadResponse)service.Execute(
+                    new InitializeFileBlocksDownloadRequest
+                    {
+                        Target = results[0].ToEntityReference(),
+                        FileAttributeName = "wrl_systempromptfile"
+                    });
 
-            svc.Create(entity);
+                var downloadResponse = (DownloadBlockResponse)service.Execute(
+                    new DownloadBlockRequest
+                    {
+                        FileContinuationToken = initResponse.FileContinuationToken,
+                        Offset = 0,
+                        BlockLength = initResponse.FileSizeInBytes
+                    });
+
+                var filePrompt = Encoding.UTF8.GetString(downloadResponse.Data).Trim();
+                if (!string.IsNullOrWhiteSpace(filePrompt))
+                    return filePrompt;
+            }
+            catch (Exception ex)
+            {
+                tracingService?.Trace($"[AccordIn] Prompt file download failed for '{intentType}': {ex.Message}");
+            }
+
+            return fallback;
         }
-
-        // -----------------------------------------------------------------------------------------
-        // Input parameter helpers
-        // -----------------------------------------------------------------------------------------
 
         private static Guid ReadPlanId(IPluginExecutionContext context)
         {
@@ -455,21 +222,20 @@ Never give a generic textbook definition.";
             {
                 var raw = context.InputParameters["PlanId"];
 
-                if (raw is EntityReference er)
-                    return er.Id;
+                if (raw is EntityReference entityReference)
+                    return entityReference.Id;
 
-                if (raw is string s && Guid.TryParse(s, out var parsed))
+                if (raw is string text && Guid.TryParse(text, out var parsed))
                     return parsed;
             }
 
             if (context.PrimaryEntityName == "wrl_accountplan" && context.PrimaryEntityId != Guid.Empty)
                 return context.PrimaryEntityId;
 
-            throw new InvalidPluginExecutionException(
-                "AccordIn RefinePlan: 'PlanId' input parameter is required (EntityReference or Guid string).");
+            throw new InvalidPluginExecutionException("PlanId is required.");
         }
 
-        private static string ReadRequiredString(IPluginExecutionContext context, string name)
+        private static string ReadOptionalString(IPluginExecutionContext context, string name, string defaultValue)
         {
             if (context.InputParameters.Contains(name))
             {
@@ -478,80 +244,617 @@ Never give a generic textbook definition.";
                     return value.Trim();
             }
 
-            throw new InvalidPluginExecutionException(
-                $"AccordIn RefinePlan: '{name}' input parameter is required and must not be empty.");
+            return defaultValue;
         }
 
-        // -----------------------------------------------------------------------------------------
-        // System prompt — read from wrl_intentprompt table, keyed by wrl_intenttype
-        // -----------------------------------------------------------------------------------------
-
-        private static string ReadSystemPrompt(IOrganizationService svc, string planType)
+        private static string GetEnvironmentVariable(IOrganizationService service, string schemaName)
         {
-            var query = new QueryExpression("wrl_intentprompt")
+            var value = GetOptionalEnvironmentVariable(service, schemaName);
+            if (!string.IsNullOrWhiteSpace(value))
+                return value;
+
+            throw new InvalidPluginExecutionException(
+                $"AccordIn: environment variable '{schemaName}' is missing or has no value.");
+        }
+
+        private static string GetOptionalEnvironmentVariable(IOrganizationService service, string schemaName)
+        {
+            var query = new QueryExpression("environmentvariabledefinition")
             {
-                ColumnSet = new ColumnSet("wrl_systemprompt"),
-                Criteria  = new FilterExpression
+                ColumnSet = new ColumnSet("defaultvalue"),
+                Criteria = new FilterExpression
                 {
                     Conditions =
                     {
-                        new ConditionExpression("wrl_intenttype", ConditionOperator.Equal, planType)
+                        new ConditionExpression("schemaname", ConditionOperator.Equal, schemaName)
                     }
                 },
-                TopCount = 1,
+                TopCount = 1
             };
 
-            var results = svc.RetrieveMultiple(query).Entities;
+            var valueLink = query.AddLink(
+                "environmentvariablevalue",
+                "environmentvariabledefinitionid",
+                "environmentvariabledefinitionid",
+                JoinOperator.LeftOuter);
+            valueLink.Columns = new ColumnSet("value");
+            valueLink.EntityAlias = "envval";
+
+            var results = service.RetrieveMultiple(query).Entities;
             if (results.Count == 0)
-                throw new InvalidPluginExecutionException(
-                    $"AccordIn RefinePlan: no system prompt found for intent type '{planType}'. " +
-                    "Create a wrl_intentprompt record with wrl_intenttype = '{planType}'.");
+                return null;
 
-            var prompt = results[0].GetAttributeValue<string>("wrl_systemprompt")?.Trim();
-            if (string.IsNullOrEmpty(prompt))
-                throw new InvalidPluginExecutionException(
-                    $"AccordIn RefinePlan: wrl_intentprompt record for '{planType}' has an empty wrl_systemprompt.");
-
-            return prompt;
+            var definition = results[0];
+            var currentValue = (definition.GetAttributeValue<AliasedValue>("envval.value")?.Value as string)?.Trim();
+            var defaultValue = definition.GetAttributeValue<string>("defaultvalue")?.Trim();
+            return string.IsNullOrWhiteSpace(currentValue) ? defaultValue : currentValue;
         }
 
-        // -----------------------------------------------------------------------------------------
-        // Plan type mapping — OptionSet integer → routing string
-        // -----------------------------------------------------------------------------------------
-
-        private static string MapPlanTypeIntToString(int value)
+        private static string GetDefaultClassifierPrompt()
         {
-            switch (value)
+            return @"You are an intent classifier for an enterprise CRM account planning copilot.
+You receive a stripped plan context (cadences, actions, recommendations, contacts with their d365Id values) and a user instruction.
+Return ONLY a JSON object with these fields:
+- action: one of update_cadence | update_action | update_recommendation | add_cadence | add_action | delete_cadence | delete_action | query | complex_refine
+- targetId: the d365Id of the record to change (null for add, query, or complex_refine)
+- changes: an object containing only the fields to change with their new values (null for query)
+- response: a brief natural language confirmation to show the user (1 sentence)
+
+Field names for changes must match these exact keys:
+  Cadence: name, contactName, frequency, channel, purpose, rationale
+  Action: description, priority, channel, suggestedTiming, rationale
+  Recommendation: productName, description, rationale, confidence, estimatedValue
+
+Frequency values must be one of: monthly, biweekly, quarterly, weekly, ad-hoc
+Channel values must be one of: phone, online-meeting, in-person, email, other
+Priority values must be one of: high, medium, low
+Confidence values must be one of: high, medium, low
+
+Use complex_refine only if the instruction requires changes to multiple different record types simultaneously or requires understanding the full plan narrative.
+Use query for questions that do not require any record changes.
+Return JSON only. No markdown. No explanation.";
+        }
+
+        private static string GetDefaultRefinePrompt()
+        {
+            return @"You are a plan refinement assistant for an enterprise CRM account planning system.
+You receive a complete account plan JSON and a user instruction.
+Return ONLY the updated plan JSON with the requested changes applied.
+Rules:
+- Preserve all d365Id and d365ContactId values exactly - never modify or remove them
+- Only change what the user explicitly requested
+- Keep all other fields identical to the input
+- Return valid JSON only - no markdown, no explanation
+- Start your response with { and end with }";
+        }
+
+        private sealed class RefineExecutor
+        {
+            private readonly IOrganizationService _service;
+            private readonly ITracingService _tracingService;
+
+            public RefineExecutor(IOrganizationService service, ITracingService tracingService)
             {
-                case 2:  return "upsell";
-                case 3:  return "retention";
-                case 4:  return "relationship";
-                default: return "cross-sell";
+                _service = service;
+                _tracingService = tracingService;
+            }
+
+            public RefineOutcome Execute(
+                Guid planId,
+                PlanResponse plan,
+                string planPayloadJson,
+                string userMessage,
+                IntentResult intent,
+                string endpoint,
+                string apiKey,
+                string deployment,
+                string apiVersion)
+            {
+                var action = (intent?.Action ?? "query").Trim().ToLowerInvariant();
+
+                switch (action)
+                {
+                    case "update_cadence":
+                        UpdateCadence(intent, plan);
+                        SavePayload(planId, plan);
+                        return RefineOutcome.Updated(intent.Response ?? "Cadence updated.");
+                    case "update_action":
+                        UpdateAction(intent, plan);
+                        SavePayload(planId, plan);
+                        return RefineOutcome.Updated(intent.Response ?? "Action updated.");
+                    case "update_recommendation":
+                        UpdateRecommendation(intent, plan);
+                        SavePayload(planId, plan);
+                        return RefineOutcome.Updated(intent.Response ?? "Recommendation updated.");
+                    case "add_cadence":
+                        AddCadence(planId, intent, plan);
+                        SavePayload(planId, plan);
+                        return RefineOutcome.Updated(intent.Response ?? "Cadence added.");
+                    case "add_action":
+                        AddAction(planId, intent, plan);
+                        SavePayload(planId, plan);
+                        return RefineOutcome.Updated(intent.Response ?? "Action added.");
+                    case "delete_cadence":
+                        DeleteCadence(intent, plan);
+                        SavePayload(planId, plan);
+                        return RefineOutcome.Updated(intent.Response ?? "Cadence removed.");
+                    case "delete_action":
+                        DeleteAction(intent, plan);
+                        SavePayload(planId, plan);
+                        return RefineOutcome.Updated(intent.Response ?? "Action removed.");
+                    case "query":
+                        return RefineOutcome.Unchanged(intent.Response ?? "I could not find an answer to that.");
+                    case "complex_refine":
+                    default:
+                        return HandleComplexRefine(planId, planPayloadJson, userMessage, endpoint, apiKey, deployment, apiVersion);
+                }
+            }
+
+            private void UpdateCadence(IntentResult intent, PlanResponse plan)
+            {
+                var targetId = ParseRequiredGuid(intent?.TargetId, "cadence");
+                var entity = new Entity("wrl_engagementcadence", targetId);
+                ApplyChangesToEntity(entity, intent.Changes, "cadence");
+                _service.Update(entity);
+
+                var cadence = plan.Cadences?.Find(c => StringEquals(c.D365Id, intent.TargetId));
+                if (cadence != null) ApplyChangesToModel(cadence, intent.Changes);
+                SyncContactCadenceFlags(plan);
+            }
+
+            private void UpdateAction(IntentResult intent, PlanResponse plan)
+            {
+                var targetId = ParseRequiredGuid(intent?.TargetId, "action");
+                var entity = new Entity("wrl_actionplan", targetId);
+                ApplyChangesToEntity(entity, intent.Changes, "action");
+                _service.Update(entity);
+
+                var action = plan.OneOffActions?.Find(a => StringEquals(a.D365Id, intent.TargetId));
+                if (action != null) ApplyChangesToModel(action, intent.Changes);
+            }
+
+            private void UpdateRecommendation(IntentResult intent, PlanResponse plan)
+            {
+                var targetId = ParseRequiredGuid(intent?.TargetId, "recommendation");
+                var entity = new Entity("wrl_planrecommendation", targetId);
+                ApplyChangesToEntity(entity, intent.Changes, "recommendation");
+                _service.Update(entity);
+
+                var recommendation = plan.Recommendations?.Find(r => StringEquals(r.D365Id, intent.TargetId));
+                if (recommendation != null) ApplyChangesToModel(recommendation, intent.Changes);
+            }
+
+            private void AddCadence(Guid planId, IntentResult intent, PlanResponse plan)
+            {
+                if (!intent.Changes.HasValue)
+                    throw new InvalidPluginExecutionException("Classifier did not return cadence changes.");
+
+                var changes = intent.Changes.Value;
+                var entity = new Entity("wrl_engagementcadence")
+                {
+                    ["wrl_accountplan"] = new EntityReference("wrl_accountplan", planId),
+                    ["wrl_cadencename"] = GetString(changes, "name") ?? "New Cadence",
+                    ["wrl_contactname"] = GetString(changes, "contactName") ?? string.Empty,
+                    ["wrl_frequency"] = new OptionSetValue(Helpers.MapFrequency(GetString(changes, "frequency"))),
+                    ["wrl_communicationchannel"] = new OptionSetValue(Helpers.MapCadenceChannel(GetString(changes, "channel"))),
+                    ["wrl_purpose"] = GetString(changes, "purpose") ?? string.Empty,
+                    ["wrl_rationale"] = GetString(changes, "rationale") ?? string.Empty,
+                    ["wrl_status"] = new OptionSetValue(1),
+                    ["wrl_startdate"] = DateTime.UtcNow,
+                    ["wrl_manageradjustment"] = true
+                };
+
+                if (TryGetBoolean(changes, "locationAware", out var locationAware))
+                    entity["wrl_locationawareness"] = locationAware;
+
+                var newId = _service.Create(entity);
+                if (plan.Cadences == null) plan.Cadences = new List<Cadence>();
+                plan.Cadences.Add(new Cadence
+                {
+                    D365Id = newId.ToString(),
+                    D365ContactId = GetString(changes, "d365ContactId"),
+                    Name = GetString(changes, "name"),
+                    ContactName = GetString(changes, "contactName"),
+                    ContactTitle = GetString(changes, "contactTitle"),
+                    Frequency = GetString(changes, "frequency"),
+                    Channel = GetString(changes, "channel"),
+                    Purpose = GetString(changes, "purpose"),
+                    Rationale = GetString(changes, "rationale"),
+                    LocationAware = TryGetBoolean(changes, "locationAware", out var modelLocationAware) && modelLocationAware
+                });
+                SyncContactCadenceFlags(plan);
+            }
+
+            private void AddAction(Guid planId, IntentResult intent, PlanResponse plan)
+            {
+                if (!intent.Changes.HasValue)
+                    throw new InvalidPluginExecutionException("Classifier did not return action changes.");
+
+                var changes = intent.Changes.Value;
+                var entity = new Entity("wrl_actionplan")
+                {
+                    ["wrl_accountplan"] = new EntityReference("wrl_accountplan", planId),
+                    ["wrl_actiondescription"] = GetString(changes, "description") ?? string.Empty,
+                    ["wrl_prioritylevel"] = new OptionSetValue(Helpers.MapPriority(GetString(changes, "priority"))),
+                    ["wrl_communicationchannel"] = new OptionSetValue(Helpers.MapActionChannel(GetString(changes, "channel"))),
+                    ["wrl_suggestedtiming"] = GetString(changes, "suggestedTiming") ?? string.Empty,
+                    ["wrl_rationale"] = GetString(changes, "rationale") ?? string.Empty,
+                    ["wrl_currentstatus"] = new OptionSetValue(1)
+                };
+
+                var newId = _service.Create(entity);
+                if (plan.OneOffActions == null) plan.OneOffActions = new List<OneOffAction>();
+                plan.OneOffActions.Add(new OneOffAction
+                {
+                    D365Id = newId.ToString(),
+                    Description = GetString(changes, "description"),
+                    Priority = GetString(changes, "priority"),
+                    Channel = GetString(changes, "channel"),
+                    SuggestedTiming = GetString(changes, "suggestedTiming"),
+                    Rationale = GetString(changes, "rationale")
+                });
+            }
+
+            private void DeleteCadence(IntentResult intent, PlanResponse plan)
+            {
+                var targetId = ParseRequiredGuid(intent?.TargetId, "cadence");
+                _service.Delete("wrl_engagementcadence", targetId);
+                plan.Cadences?.RemoveAll(c => StringEquals(c.D365Id, intent.TargetId));
+                SyncContactCadenceFlags(plan);
+            }
+
+            private void DeleteAction(IntentResult intent, PlanResponse plan)
+            {
+                var targetId = ParseRequiredGuid(intent?.TargetId, "action");
+                _service.Delete("wrl_actionplan", targetId);
+                plan.OneOffActions?.RemoveAll(a => StringEquals(a.D365Id, intent.TargetId));
+            }
+
+            private RefineOutcome HandleComplexRefine(
+                Guid planId,
+                string planPayloadJson,
+                string userMessage,
+                string endpoint,
+                string apiKey,
+                string deployment,
+                string apiVersion)
+            {
+                var refinePrompt = GetIntentPrompt(_service, _tracingService, "refine", GetDefaultRefinePrompt());
+                var aiClient = new AzureOpenAIClient(endpoint, apiKey, deployment, apiVersion, _tracingService);
+                var updatedJson = aiClient.RefineWithFullContext(planPayloadJson, userMessage, refinePrompt);
+
+                var parseResult = AzureOpenAIClient.ParseResponse(updatedJson);
+                if (!parseResult.Success || parseResult.Parsed == null)
+                    throw new InvalidPluginExecutionException(
+                        $"AccordIn RefinePlan: updated plan JSON could not be parsed - {parseResult.ParseError}");
+
+                SaveFullPlanUpdate(planId, parseResult.Parsed);
+                return RefineOutcome.Updated("Plan updated based on your instructions.");
+            }
+
+            private void SaveFullPlanUpdate(Guid planId, PlanResponse updatedPlan)
+            {
+                var payload = JsonConvert.SerializeObject(updatedPlan, Formatting.None);
+                var headerUpdate = new Entity("wrl_accountplan", planId)
+                {
+                    ["wrl_planpayload"] = payload,
+                    ["wrl_aiopeningstatement"] = updatedPlan.OpeningStatement,
+                    ["wrl_healthsummary"] = updatedPlan.HealthSummary,
+                    ["wrl_growthobjectives"] = updatedPlan.GrowthObjectives,
+                    ["wrl_revenuetarget"] = new Money(updatedPlan.RevenueTarget)
+                };
+                _service.Update(headerUpdate);
+
+                DeleteChildren(planId, "wrl_engagementcadence");
+                DeleteChildren(planId, "wrl_actionplan");
+                DeleteChildren(planId, "wrl_planrecommendation");
+
+                CreateCadences(planId, updatedPlan.Cadences);
+                CreateActions(planId, updatedPlan.OneOffActions);
+                CreateRecommendations(planId, updatedPlan.Recommendations);
+                SyncContactCadenceFlags(updatedPlan);
+
+                _service.Update(new Entity("wrl_accountplan", planId)
+                {
+                    ["wrl_planpayload"] = JsonConvert.SerializeObject(updatedPlan, Formatting.None)
+                });
+            }
+
+            private void SavePayload(Guid planId, PlanResponse plan)
+            {
+                SyncContactCadenceFlags(plan);
+                _service.Update(new Entity("wrl_accountplan", planId)
+                {
+                    ["wrl_planpayload"] = JsonConvert.SerializeObject(plan, Formatting.None)
+                });
+            }
+
+            private void DeleteChildren(Guid planId, string entityLogicalName)
+            {
+                var query = new QueryExpression(entityLogicalName)
+                {
+                    ColumnSet = new ColumnSet(false),
+                    Criteria = new FilterExpression
+                    {
+                        Conditions =
+                        {
+                            new ConditionExpression("wrl_accountplan", ConditionOperator.Equal, planId)
+                        }
+                    }
+                };
+
+                foreach (var entity in _service.RetrieveMultiple(query).Entities)
+                    _service.Delete(entityLogicalName, entity.Id);
+            }
+
+            private void CreateCadences(Guid planId, IList<Cadence> cadences)
+            {
+                if (cadences == null) return;
+                foreach (var cadence in cadences)
+                {
+                    if (cadence == null) continue;
+                    var entity = new Entity("wrl_engagementcadence")
+                    {
+                        ["wrl_accountplan"] = new EntityReference("wrl_accountplan", planId),
+                        ["wrl_cadencename"] = cadence.Name,
+                        ["wrl_contactname"] = cadence.ContactName ?? cadence.ContactTitle,
+                        ["wrl_frequency"] = new OptionSetValue(Helpers.MapFrequency(cadence.Frequency)),
+                        ["wrl_communicationchannel"] = new OptionSetValue(Helpers.MapCadenceChannel(cadence.Channel)),
+                        ["wrl_purpose"] = cadence.Purpose,
+                        ["wrl_rationale"] = cadence.Rationale,
+                        ["wrl_locationawareness"] = cadence.LocationAware,
+                        ["wrl_status"] = new OptionSetValue(1),
+                        ["wrl_startdate"] = DateTime.UtcNow,
+                        ["wrl_manageradjustment"] = true
+                    };
+
+                    cadence.D365Id = _service.Create(entity).ToString();
+                }
+            }
+
+            private void CreateActions(Guid planId, IList<OneOffAction> actions)
+            {
+                if (actions == null) return;
+                foreach (var action in actions)
+                {
+                    if (action == null) continue;
+                    var entity = new Entity("wrl_actionplan")
+                    {
+                        ["wrl_accountplan"] = new EntityReference("wrl_accountplan", planId),
+                        ["wrl_actiondescription"] = action.Description,
+                        ["wrl_prioritylevel"] = new OptionSetValue(Helpers.MapPriority(action.Priority)),
+                        ["wrl_communicationchannel"] = new OptionSetValue(Helpers.MapActionChannel(action.Channel)),
+                        ["wrl_suggestedtiming"] = action.SuggestedTiming,
+                        ["wrl_rationale"] = action.Rationale,
+                        ["wrl_currentstatus"] = new OptionSetValue(1)
+                    };
+
+                    action.D365Id = _service.Create(entity).ToString();
+                }
+            }
+
+            private void CreateRecommendations(Guid planId, IList<Recommendation> recommendations)
+            {
+                if (recommendations == null) return;
+
+                var sortOrder = 1;
+                foreach (var recommendation in recommendations)
+                {
+                    if (recommendation == null) continue;
+                    var entity = new Entity("wrl_planrecommendation")
+                    {
+                        ["wrl_accountplan"] = new EntityReference("wrl_accountplan", planId),
+                        ["wrl_productname"] = recommendation.ProductName,
+                        ["wrl_recommendationtype"] = new OptionSetValue(Helpers.MapRecommendationType(recommendation.Type)),
+                        ["wrl_description"] = recommendation.Description,
+                        ["wrl_rationale"] = recommendation.Rationale,
+                        ["wrl_confidence"] = new OptionSetValue(Helpers.MapConfidence(recommendation.Confidence)),
+                        ["wrl_confidencereason"] = recommendation.ConfidenceReason,
+                        ["wrl_sortorder"] = sortOrder++
+                    };
+
+                    if (recommendation.EstimatedValue > 0)
+                        entity["wrl_estimatedvalue"] = new Money(recommendation.EstimatedValue);
+
+                    recommendation.D365Id = _service.Create(entity).ToString();
+                }
+            }
+
+            private static Guid ParseRequiredGuid(string value, string entityLabel)
+            {
+                if (Guid.TryParse(value, out var parsed))
+                    return parsed;
+
+                throw new InvalidPluginExecutionException($"Classifier did not return a valid {entityLabel} targetId.");
+            }
+
+            private static bool StringEquals(string left, string right)
+            {
+                return string.Equals(left?.Trim(), right?.Trim(), StringComparison.OrdinalIgnoreCase);
+            }
+
+            private static void SyncContactCadenceFlags(PlanResponse plan)
+            {
+                var cadenceNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var cadence in plan.Cadences ?? new List<Cadence>())
+                {
+                    if (!string.IsNullOrWhiteSpace(cadence.ContactName))
+                        cadenceNames.Add(cadence.ContactName.Trim());
+                    if (!string.IsNullOrWhiteSpace(cadence.ContactTitle))
+                        cadenceNames.Add(cadence.ContactTitle.Trim());
+                }
+
+                foreach (var contact in plan.ContactEngagement ?? new List<ContactEngagementItem>())
+                {
+                    contact.HasCadence =
+                        (!string.IsNullOrWhiteSpace(contact.Name) && cadenceNames.Contains(contact.Name.Trim())) ||
+                        (!string.IsNullOrWhiteSpace(contact.Title) && cadenceNames.Contains(contact.Title.Trim()));
+                }
+            }
+
+            private static void ApplyChangesToEntity(Entity entity, JsonElement? changes, string type)
+            {
+                if (!changes.HasValue) return;
+                var current = changes.Value;
+
+                if (type == "cadence")
+                {
+                    if (TryGetString(current, "name", out var name))
+                        entity["wrl_cadencename"] = name;
+                    if (TryGetString(current, "contactName", out var contactName))
+                        entity["wrl_contactname"] = contactName;
+                    if (TryGetString(current, "frequency", out var frequency))
+                        entity["wrl_frequency"] = new OptionSetValue(Helpers.MapFrequency(frequency));
+                    if (TryGetString(current, "channel", out var channel))
+                        entity["wrl_communicationchannel"] = new OptionSetValue(Helpers.MapCadenceChannel(channel));
+                    if (TryGetString(current, "purpose", out var purpose))
+                        entity["wrl_purpose"] = purpose;
+                    if (TryGetString(current, "rationale", out var rationale))
+                        entity["wrl_rationale"] = rationale;
+                    if (TryGetBoolean(current, "locationAware", out var locationAware))
+                        entity["wrl_locationawareness"] = locationAware;
+                }
+                else if (type == "action")
+                {
+                    if (TryGetString(current, "description", out var description))
+                        entity["wrl_actiondescription"] = description;
+                    if (TryGetString(current, "priority", out var priority))
+                        entity["wrl_prioritylevel"] = new OptionSetValue(Helpers.MapPriority(priority));
+                    if (TryGetString(current, "channel", out var channel))
+                        entity["wrl_communicationchannel"] = new OptionSetValue(Helpers.MapActionChannel(channel));
+                    if (TryGetString(current, "suggestedTiming", out var suggestedTiming))
+                        entity["wrl_suggestedtiming"] = suggestedTiming;
+                    if (TryGetString(current, "rationale", out var rationale))
+                        entity["wrl_rationale"] = rationale;
+                }
+                else if (type == "recommendation")
+                {
+                    if (TryGetString(current, "productName", out var productName))
+                        entity["wrl_productname"] = productName;
+                    if (TryGetString(current, "description", out var description))
+                        entity["wrl_description"] = description;
+                    if (TryGetString(current, "rationale", out var rationale))
+                        entity["wrl_rationale"] = rationale;
+                    if (TryGetString(current, "confidence", out var confidence))
+                        entity["wrl_confidence"] = new OptionSetValue(Helpers.MapConfidence(confidence));
+                    if (TryGetDecimal(current, "estimatedValue", out var estimatedValue))
+                        entity["wrl_estimatedvalue"] = new Money(estimatedValue);
+                }
+            }
+
+            private static void ApplyChangesToModel(Cadence cadence, JsonElement? changes)
+            {
+                if (!changes.HasValue) return;
+                var current = changes.Value;
+                if (TryGetString(current, "name", out var name)) cadence.Name = name;
+                if (TryGetString(current, "contactName", out var contactName)) cadence.ContactName = contactName;
+                if (TryGetString(current, "contactTitle", out var contactTitle)) cadence.ContactTitle = contactTitle;
+                if (TryGetString(current, "frequency", out var frequency)) cadence.Frequency = frequency;
+                if (TryGetString(current, "channel", out var channel)) cadence.Channel = channel;
+                if (TryGetString(current, "purpose", out var purpose)) cadence.Purpose = purpose;
+                if (TryGetString(current, "rationale", out var rationale)) cadence.Rationale = rationale;
+                if (TryGetBoolean(current, "locationAware", out var locationAware)) cadence.LocationAware = locationAware;
+            }
+
+            private static void ApplyChangesToModel(OneOffAction action, JsonElement? changes)
+            {
+                if (!changes.HasValue) return;
+                var current = changes.Value;
+                if (TryGetString(current, "description", out var description)) action.Description = description;
+                if (TryGetString(current, "priority", out var priority)) action.Priority = priority;
+                if (TryGetString(current, "channel", out var channel)) action.Channel = channel;
+                if (TryGetString(current, "suggestedTiming", out var suggestedTiming)) action.SuggestedTiming = suggestedTiming;
+                if (TryGetString(current, "rationale", out var rationale)) action.Rationale = rationale;
+            }
+
+            private static void ApplyChangesToModel(Recommendation recommendation, JsonElement? changes)
+            {
+                if (!changes.HasValue) return;
+                var current = changes.Value;
+                if (TryGetString(current, "productName", out var productName)) recommendation.ProductName = productName;
+                if (TryGetString(current, "description", out var description)) recommendation.Description = description;
+                if (TryGetString(current, "rationale", out var rationale)) recommendation.Rationale = rationale;
+                if (TryGetString(current, "confidence", out var confidence)) recommendation.Confidence = confidence;
+                if (TryGetDecimal(current, "estimatedValue", out var estimatedValue)) recommendation.EstimatedValue = estimatedValue;
+            }
+
+            private static bool TryGetString(JsonElement element, string property, out string value)
+            {
+                value = null;
+                if (!element.TryGetProperty(property, out var prop))
+                    return false;
+
+                if (prop.ValueKind == JsonValueKind.String)
+                {
+                    value = prop.GetString();
+                    return !string.IsNullOrWhiteSpace(value);
+                }
+
+                return false;
+            }
+
+            private static string GetString(JsonElement element, string property)
+            {
+                return TryGetString(element, property, out var value) ? value : null;
+            }
+
+            private static bool TryGetBoolean(JsonElement element, string property, out bool value)
+            {
+                value = false;
+                if (!element.TryGetProperty(property, out var prop))
+                    return false;
+
+                if (prop.ValueKind == JsonValueKind.True || prop.ValueKind == JsonValueKind.False)
+                {
+                    value = prop.GetBoolean();
+                    return true;
+                }
+
+                if (prop.ValueKind == JsonValueKind.String && bool.TryParse(prop.GetString(), out var parsed))
+                {
+                    value = parsed;
+                    return true;
+                }
+
+                return false;
+            }
+
+            private static bool TryGetDecimal(JsonElement element, string property, out decimal value)
+            {
+                value = 0m;
+                if (!element.TryGetProperty(property, out var prop))
+                    return false;
+
+                if (prop.ValueKind == JsonValueKind.Number && prop.TryGetDecimal(out var decimalValue))
+                {
+                    value = decimalValue;
+                    return true;
+                }
+
+                if (prop.ValueKind == JsonValueKind.String && decimal.TryParse(prop.GetString(), out var parsed))
+                {
+                    value = parsed;
+                    return true;
+                }
+
+                return false;
             }
         }
 
-        // -----------------------------------------------------------------------------------------
-        // Supporting types (private to this class)
-        // -----------------------------------------------------------------------------------------
-
-        private class PlanRecord
+        private sealed class RefineOutcome
         {
-            public Guid   AccountId { get; set; }
-            public string PlanType  { get; set; }
-            public string Payload   { get; set; }
-        }
+            public bool IsPlanUpdate { get; private set; }
+            public string ResponseMessage { get; private set; }
 
-        private class ConversationRecord
-        {
-            public int    Sequence { get; set; }
-            public string Role     { get; set; }   // "user" | "assistant"
-            public string Content  { get; set; }
-        }
+            public static RefineOutcome Updated(string message)
+            {
+                return new RefineOutcome { IsPlanUpdate = true, ResponseMessage = message };
+            }
 
-        private class ExtractedPlan
-        {
-            public string JsonText    { get; set; }
-            public string Explanation { get; set; }
+            public static RefineOutcome Unchanged(string message)
+            {
+                return new RefineOutcome { IsPlanUpdate = false, ResponseMessage = message };
+            }
         }
     }
 }

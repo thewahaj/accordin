@@ -127,6 +127,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="GeneratePlan.cs" />
+    <Compile Include="Helpers.cs" />
     <Compile Include="Models\AccountPlanData.cs" />
     <Compile Include="Models\PlanResponse.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -134,6 +135,7 @@
     <Compile Include="Services\AzureOpenAIClient.cs" />
     <Compile Include="Services\ContactEnricher.cs" />
     <Compile Include="Services\DataCollector.cs" />
+    <Compile Include="Services\IntentClassifier.cs" />
     <Compile Include="Services\PipelineCalculator.cs" />
     <Compile Include="Services\PlanSaver.cs" />
   </ItemGroup>

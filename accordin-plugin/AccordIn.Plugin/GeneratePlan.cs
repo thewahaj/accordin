@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json;
 using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
@@ -13,21 +14,23 @@ namespace AccordIn.Plugin
     /// D365 plugin bound to the accordin_GeneratePlan custom action.
     ///
     /// Orchestration order mirrors run.js exactly:
-    ///   1. DataCollector      — reads Account, Opportunities, Contacts, Activities, Signals
-    ///   2. PipelineCalculator — pre-calculates exactTotal / weightedTotal / totalLow / totalHigh
-    ///   3. ContactEnricher    — derives suggestedPlanRole for each contact
-    ///   4. AzureOpenAIClient  — strips opportunity values, builds prompt, calls model
-    ///   5. Post-processing    — overwrites revenue fields; fixes hasCadence (CLAUDE.md §1, §3)
-    ///   6. PlanSaver          — writes wrl_accountplan + all child records to Dataverse
+    ///   1. DataCollector      - reads Account, Opportunities, Contacts, Activities, Signals
+    ///   2. PipelineCalculator - pre-calculates exactTotal / weightedTotal / totalLow / totalHigh
+    ///   3. ContactEnricher    - derives suggestedPlanRole for each contact
+    ///   4. AzureOpenAIClient  - strips opportunity values, builds prompt, calls model
+    ///   5. Post-processing    - overwrites revenue fields; fixes hasCadence
+    ///   6. Contact matching   - injects contactName and d365ContactId into the plan
+    ///   7. PlanSaver          - writes wrl_accountplan + all child records to Dataverse
     ///
     /// Input parameters (custom action):
-    ///   AccountId    (String)  — GUID of the target Account — required
-    ///   PlanIntent   (String)  — the AM's intent text — required
-    ///   PlanType     (String)  — "cross-sell" | "upsell" | "retention" | "relationship"
+    ///   AccountId    (String) - GUID of the target Account - required
+    ///   PlanIntent   (String) - the AM's intent text - required
+    ///   PlanType     (String) - "cross-sell" | "upsell" | "retention" | "relationship"
     ///                            optional, defaults to "cross-sell"
     ///
     /// Output parameters:
-    ///   PlanId       (String)  — GUID of the created wrl_accountplan record
+    ///   PlanId       (String) - GUID of the created wrl_accountplan record
+    ///   PlanPayload  (String) - final saved plan payload including Dataverse IDs
     /// </summary>
     public class GeneratePlan : IPlugin
     {
@@ -36,8 +39,8 @@ namespace AccordIn.Plugin
 
         public void Execute(IServiceProvider serviceProvider)
         {
-            var context        = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
-            var tracer         = (ITracingService)serviceProvider.GetService(typeof(ITracingService));
+            var context = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
+            var tracer = (ITracingService)serviceProvider.GetService(typeof(ITracingService));
             var serviceFactory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
 
             // Run as the initiating user so Dataverse security roles are respected
@@ -59,18 +62,18 @@ namespace AccordIn.Plugin
         }
 
         private static void Run(
-            IPluginExecutionContext  context,
-            IOrganizationService     svc,
-            ITracingService          tracer)
+            IPluginExecutionContext context,
+            IOrganizationService svc,
+            ITracingService tracer)
         {
             // ------------------------------------------------------------------
             // 1. Read and validate input parameters
             // ------------------------------------------------------------------
             var accountId = ReadAccountId(context);
             var planIntent = ReadRequiredString(context, "PlanIntent");
-            var planType   = ReadOptionalString(context, "PlanType", "cross-sell");
+            var planType = ReadOptionalString(context, "PlanType", "cross-sell");
 
-            tracer?.Trace($"[AccordIn] GeneratePlan — account {accountId}, type '{planType}'");
+            tracer?.Trace($"[AccordIn] GeneratePlan - account {accountId}, type '{planType}'");
 
             // ------------------------------------------------------------------
             // 2. Load system prompt from wrl_intentprompt table
@@ -81,97 +84,94 @@ namespace AccordIn.Plugin
             // 3. Collect account data from Dataverse
             // ------------------------------------------------------------------
             var collector = new DataCollector(svc);
-            var data      = collector.Collect(accountId, planIntent, planType);
+            var data = collector.Collect(accountId, planIntent, planType);
 
             tracer?.Trace($"[AccordIn] Collected {data.Opportunities.Count} opportunities, {data.Contacts.Count} contacts");
 
             // ------------------------------------------------------------------
-            // 4. Pre-calculate pipeline totals — these are injected as facts and
-            //    overwrite the model's output after the call (CLAUDE.md §1)
+            // 4. Pre-calculate pipeline totals
             // ------------------------------------------------------------------
             var calculator = new PipelineCalculator();
-            var pipeline   = calculator.Calculate(data.Opportunities);
+            var pipeline = calculator.Calculate(data.Opportunities);
 
-            tracer?.Trace($"[AccordIn] Pipeline — exact £{pipeline.ExactTotal:N0}, weighted £{pipeline.WeightedTotal:N0}, low £{pipeline.TotalLow:N0}");
+            tracer?.Trace($"[AccordIn] Pipeline - exact GBP{pipeline.ExactTotal:N0}, weighted GBP{pipeline.WeightedTotal:N0}, low GBP{pipeline.TotalLow:N0}");
 
             // ------------------------------------------------------------------
-            // 5. Derive suggestedPlanRole for each contact (CLAUDE.md §2)
+            // 5. Derive suggestedPlanRole for each contact
             // ------------------------------------------------------------------
             var enricher = new ContactEnricher();
             enricher.Enrich(data.Contacts, data.Opportunities);
 
             // ------------------------------------------------------------------
-            // 6. Call the model — opportunity values are stripped inside Generate()
+            // 6. Call the model
             // ------------------------------------------------------------------
             var aiClient = AzureOpenAIClient.FromEnvironmentVariables(svc, tracer);
-            var result   = aiClient.Generate(systemPrompt, data, pipeline);
+            var result = aiClient.Generate(systemPrompt, data, pipeline);
 
             if (!result.Success)
             {
                 tracer?.Trace($"[AccordIn] Parse error. Raw response:\n{result.Raw}");
                 throw new InvalidPluginExecutionException(
-                    $"AccordIn: model response could not be parsed — {result.ParseError}. " +
+                    $"AccordIn: model response could not be parsed - {result.ParseError}. " +
                     "Check the plugin trace log for the raw response.");
             }
 
             var plan = result.Parsed;
 
             // ------------------------------------------------------------------
-            // 7. Post-process: overwrite revenue figures with verified values (CLAUDE.md §1)
+            // 7. Post-process verified revenue fields
             // ------------------------------------------------------------------
             PostProcessRevenue(plan, pipeline);
 
             // ------------------------------------------------------------------
-            // 8. Post-process: fix hasCadence from actual cadences list (CLAUDE.md §3)
+            // 8. Post-process hasCadence based on actual cadence list
             // ------------------------------------------------------------------
             PostProcessHasCadence(plan);
 
-            tracer?.Trace($"[AccordIn] Post-processing complete — {plan.Cadences?.Count ?? 0} cadences, {plan.Recommendations?.Count ?? 0} recommendations");
+            // ------------------------------------------------------------------
+            // 9. Inject contactName and d365ContactId before any save
+            // ------------------------------------------------------------------
+            enricher.InjectContactIds(plan, data.Contacts);
+
+            tracer?.Trace($"[AccordIn] Post-processing complete - {plan.Cadences?.Count ?? 0} cadences, {plan.Recommendations?.Count ?? 0} recommendations");
 
             // ------------------------------------------------------------------
-            // 9. Resolve plan owner email from the initiating user's systemuser record
+            // 10. Resolve plan owner email from the initiating user's systemuser record
             // ------------------------------------------------------------------
             var planOwnerEmail = ResolveUserEmail(svc, context.InitiatingUserId);
 
             // ------------------------------------------------------------------
-            // 10. Save to Dataverse
+            // 11. Save to Dataverse
             // ------------------------------------------------------------------
-            var saver  = new PlanSaver(svc, tracer);
+            var saver = new PlanSaver(svc, tracer);
             var planId = saver.Save(accountId, planOwnerEmail, data, plan, pipeline);
 
-            tracer?.Trace($"[AccordIn] Plan saved — wrl_accountplan {planId}");
+            tracer?.Trace($"[AccordIn] Plan saved - wrl_accountplan {planId}");
 
             // ------------------------------------------------------------------
-            // 11. Return output parameter
+            // 12. Return output parameters
             // ------------------------------------------------------------------
             context.OutputParameters["PlanId"] = planId.ToString();
+            context.OutputParameters["PlanPayload"] = JsonConvert.SerializeObject(plan, Formatting.None);
         }
 
         // -----------------------------------------------------------------------------------------
-        // Post-processing — mirrors run.js lines 183-199
+        // Post-processing
         // -----------------------------------------------------------------------------------------
 
-        /// <summary>
-        /// Overwrites the model's revenue figures with the pre-calculated pipeline values.
-        /// The model reasons about revenue but must never compute it — these are facts (CLAUDE.md §1).
-        /// </summary>
         private static void PostProcessRevenue(PlanResponse plan, PipelineResult pipeline)
         {
             if (plan.RevenuePicture != null)
             {
                 plan.RevenuePicture.PipelineValue = pipeline.ExactTotal;
-                plan.RevenuePicture.TotalLow      = pipeline.TotalLow;
-                plan.RevenuePicture.TotalMid      = pipeline.WeightedTotal;
-                plan.RevenuePicture.TotalHigh     = pipeline.TotalHigh;
+                plan.RevenuePicture.TotalLow = pipeline.TotalLow;
+                plan.RevenuePicture.TotalMid = pipeline.WeightedTotal;
+                plan.RevenuePicture.TotalHigh = pipeline.TotalHigh;
             }
 
             plan.RevenueTarget = pipeline.WeightedTotal;
         }
 
-        /// <summary>
-        /// Sets hasCadence on each ContactEngagementItem by checking whether the contact's
-        /// title appears in the cadences list. The model self-reports this inaccurately (CLAUDE.md §3).
-        /// </summary>
         private static void PostProcessHasCadence(PlanResponse plan)
         {
             if (plan.ContactEngagement == null || plan.Cadences == null) return;
@@ -194,7 +194,6 @@ namespace AccordIn.Plugin
 
         private static Guid ReadAccountId(IPluginExecutionContext context)
         {
-            // Support both EntityReference and String (Guid) input parameter types
             if (context.InputParameters.Contains("AccountId"))
             {
                 var raw = context.InputParameters["AccountId"];
@@ -206,7 +205,6 @@ namespace AccordIn.Plugin
                     return parsed;
             }
 
-            // Bound action fallback: the target record IS the account
             if (context.PrimaryEntityName == "account" && context.PrimaryEntityId != Guid.Empty)
                 return context.PrimaryEntityId;
 
@@ -240,16 +238,15 @@ namespace AccordIn.Plugin
         }
 
         // -----------------------------------------------------------------------------------------
-        // System prompt — read from wrl_intentprompt table, keyed by wrl_intenttype
+        // System prompt
         // -----------------------------------------------------------------------------------------
 
         private static string ReadSystemPrompt(IOrganizationService svc, string planType)
         {
-            // Locate the wrl_intentprompt record for this intent type
             var query = new QueryExpression("wrl_intentprompt")
             {
-                ColumnSet = new ColumnSet(false), // primary key only — file content downloaded separately
-                Criteria  = new FilterExpression
+                ColumnSet = new ColumnSet(false),
+                Criteria = new FilterExpression
                 {
                     Conditions =
                     {
@@ -265,17 +262,15 @@ namespace AccordIn.Plugin
                     $"AccordIn GeneratePlan: no system prompt found for intent type '{planType}'. " +
                     $"Create a wrl_intentprompt record with wrl_intenttype = '{planType}'.");
 
-            var recordId  = results[0].Id;
+            var recordId = results[0].Id;
             var recordRef = new EntityReference("wrl_intentprompt", recordId);
 
-            // Download the prompt .txt file from the wrl_SystemPromptFile file column.
-            // Uses InitializeFileBlocksDownload + DownloadBlock (single-block; prompt files are well under 4 MB).
             try
             {
                 var initResponse = (InitializeFileBlocksDownloadResponse)svc.Execute(
                     new InitializeFileBlocksDownloadRequest
                     {
-                        Target            = recordRef,
+                        Target = recordRef,
                         FileAttributeName = "wrl_systempromptfile"
                     });
 
@@ -283,8 +278,8 @@ namespace AccordIn.Plugin
                     new DownloadBlockRequest
                     {
                         FileContinuationToken = initResponse.FileContinuationToken,
-                        Offset                = 0,
-                        BlockLength           = initResponse.FileSizeInBytes
+                        Offset = 0,
+                        BlockLength = initResponse.FileSizeInBytes
                     });
 
                 var prompt = Encoding.UTF8.GetString(downloadResponse.Data).Trim();
@@ -320,7 +315,6 @@ namespace AccordIn.Plugin
             }
             catch
             {
-                // Non-critical — plan saves without an owner email rather than failing
                 return null;
             }
         }

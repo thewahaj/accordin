@@ -6,9 +6,9 @@ namespace AccordIn.Plugin.Models
     /// <summary>
     /// Deserialised model output. Matches the JSON schema defined in the cross-sell system prompt (Section 8).
     /// Revenue fields (pipelineValue, totalLow, totalMid, totalHigh, revenueTarget) are OVERWRITTEN
-    /// by PipelineCalculator after deserialisation — never trust the model's arithmetic.
+    /// by PipelineCalculator after deserialisation - never trust the model's arithmetic.
     /// hasCadence on each ContactEngagementItem is OVERWRITTEN by post-processing in GeneratePlan
-    /// based on the actual cadences list — the model self-reports this inaccurately.
+    /// based on the actual cadences list - the model self-reports this inaccurately.
     /// </summary>
     public class PlanResponse
     {
@@ -43,7 +43,7 @@ namespace AccordIn.Plugin.Models
 
         /// <summary>
         /// All contacts from the input, each assigned a planRole.
-        /// hasCadence is post-processed after deserialisation — do not rely on the raw model value.
+        /// hasCadence is post-processed after deserialisation - do not rely on the raw model value.
         /// </summary>
         [JsonProperty("contactEngagement")]
         public List<ContactEngagementItem> ContactEngagement { get; set; } = new List<ContactEngagementItem>();
@@ -75,7 +75,7 @@ namespace AccordIn.Plugin.Models
         public List<OneOffAction> OneOffActions { get; set; } = new List<OneOffAction>();
 
         /// <summary>
-        /// Data gaps identified by the model. Never empty — minimum entry is a confirmation of what
+        /// Data gaps identified by the model. Never empty - minimum entry is a confirmation of what
         /// data was available. Maps to dataLimitations in the plan payload.
         /// </summary>
         [JsonProperty("dataLimitations")]
@@ -112,6 +112,9 @@ namespace AccordIn.Plugin.Models
         /// <summary>One sentence citing last activity, engagement level, or specific risk/opportunity.</summary>
         [JsonProperty("strategicNote")]
         public string StrategicNote { get; set; }
+
+        [JsonProperty("d365ContactId", NullValueHandling = NullValueHandling.Include)]
+        public string D365ContactId { get; set; }
     }
 
     public class RevenuePicture
@@ -122,7 +125,7 @@ namespace AccordIn.Plugin.Models
         [JsonProperty("pipelineValue")]
         public decimal PipelineValue { get; set; }
 
-        /// <summary>Each open opportunity listed by name and stage only (no values — the model never sees them).</summary>
+        /// <summary>Each open opportunity listed by name and stage only (no values - the model never sees them).</summary>
         [JsonProperty("pipelineDetail")]
         public string PipelineDetail { get; set; }
 
@@ -137,14 +140,14 @@ namespace AccordIn.Plugin.Models
         public string WhitespaceDetail { get; set; }
 
         /// <summary>
-        /// Floor: highest-confidence stage opportunities × their stage weight.
+        /// Floor: highest-confidence stage opportunities x their stage weight.
         /// Post-processed with the pre-calculated value from PipelineCalculator.
         /// </summary>
         [JsonProperty("totalLow")]
         public decimal TotalLow { get; set; }
 
         /// <summary>
-        /// All open opportunities × their stage weights (stage-weighted total).
+        /// All open opportunities x their stage weights (stage-weighted total).
         /// Post-processed with the pre-calculated value from PipelineCalculator.
         /// </summary>
         [JsonProperty("totalMid")]
@@ -157,13 +160,16 @@ namespace AccordIn.Plugin.Models
         [JsonProperty("totalHigh")]
         public decimal TotalHigh { get; set; }
 
-        /// <summary>Narrative confidence band, e.g. "£18,200–£73,000".</summary>
+        /// <summary>Narrative confidence band, e.g. "GBP18,200-GBP73,000".</summary>
         [JsonProperty("confidenceBand")]
         public string ConfidenceBand { get; set; }
     }
 
     public class Recommendation
     {
+        [JsonProperty("d365Id", NullValueHandling = NullValueHandling.Include)]
+        public string D365Id { get; set; }
+
         /// <summary>cross-sell | upsell | retention | relationship</summary>
         [JsonProperty("type")]
         public string Type { get; set; }
@@ -175,7 +181,7 @@ namespace AccordIn.Plugin.Models
         [JsonProperty("description")]
         public string Description { get; set; }
 
-        /// <summary>Must cite a specific date, contact name, activity, or signal — or state industry best practice basis.</summary>
+        /// <summary>Must cite a specific date, contact name, activity, or signal - or state industry best practice basis.</summary>
         [JsonProperty("rationale")]
         public string Rationale { get; set; }
 
@@ -193,11 +199,20 @@ namespace AccordIn.Plugin.Models
 
     public class Cadence
     {
-        /// <summary>Must reflect the specific business objective, e.g. "Strategic Expansion Review — CTO".</summary>
+        [JsonProperty("d365Id", NullValueHandling = NullValueHandling.Include)]
+        public string D365Id { get; set; }
+
+        [JsonProperty("d365ContactId", NullValueHandling = NullValueHandling.Include)]
+        public string D365ContactId { get; set; }
+
+        /// <summary>Must reflect the specific business objective, e.g. "Strategic Expansion Review - CTO".</summary>
         [JsonProperty("name")]
         public string Name { get; set; }
 
-        /// <summary>Contact title — used for hasCadence post-processing (matched case-insensitively).</summary>
+        [JsonProperty("contactName", NullValueHandling = NullValueHandling.Include)]
+        public string ContactName { get; set; }
+
+        /// <summary>Contact title - used for hasCadence post-processing (matched case-insensitively).</summary>
         [JsonProperty("contactTitle")]
         public string ContactTitle { get; set; }
 
@@ -223,6 +238,9 @@ namespace AccordIn.Plugin.Models
 
     public class OneOffAction
     {
+        [JsonProperty("d365Id", NullValueHandling = NullValueHandling.Include)]
+        public string D365Id { get; set; }
+
         [JsonProperty("description")]
         public string Description { get; set; }
 

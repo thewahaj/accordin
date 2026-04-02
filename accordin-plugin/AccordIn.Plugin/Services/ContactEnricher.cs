@@ -68,6 +68,37 @@ namespace AccordIn.Plugin.Services
             return contacts;
         }
 
+        public void InjectContactIds(PlanResponse plan, IList<Contact> contacts)
+        {
+            if (plan == null || contacts == null || contacts.Count == 0)
+                return;
+
+            foreach (var cadence in plan.Cadences ?? new List<Cadence>())
+            {
+                if (cadence == null) continue;
+
+                var match = contacts.FirstOrDefault(c =>
+                    string.Equals(c.Title, cadence.ContactTitle, StringComparison.OrdinalIgnoreCase));
+
+                if (match == null) continue;
+
+                cadence.ContactName = match.Name;
+                cadence.D365ContactId = match.ContactId != Guid.Empty ? match.ContactId.ToString() : null;
+            }
+
+            foreach (var engagement in plan.ContactEngagement ?? new List<ContactEngagementItem>())
+            {
+                if (engagement == null) continue;
+
+                var match = contacts.FirstOrDefault(c =>
+                    string.Equals(c.Name, engagement.Name, StringComparison.OrdinalIgnoreCase));
+
+                if (match == null || match.ContactId == Guid.Empty) continue;
+
+                engagement.D365ContactId = match.ContactId.ToString();
+            }
+        }
+
         // -----------------------------------------------------------------------------------------
 
         private static string DeriveRole(Contact c, string primaryName, IList<Opportunity> opportunities)

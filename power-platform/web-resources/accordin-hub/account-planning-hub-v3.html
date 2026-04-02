@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AccordIn — Account Planning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:#0e1e35;--navy-mid:#152844;--navy-light:#1c3455;--navy-bd:#263f60;
+  --blue:#2463eb;--blue-lt:#3b82f6;--blue-pale:#eff6ff;
+  --teal:#0d9488;--teal-pale:#f0fdfa;
+  --amber:#b45309;--amber-pale:#fffbeb;
+  --red:#b91c1c;--red-pale:#fef2f2;
+  --green:#15803d;--green-pale:#f0fdf4;
+  --slate:#64748b;--slate-lt:#94a3b8;
+  --white:#ffffff;--off-white:#f8fafc;--surface:#f1f5f9;
+  --border:#e2e8f0;--border-md:#cbd5e1;
+  --text:#0f172a;--text-mid:#334155;--text-muted:#64748b;
+  --font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+  --r:5px;--r-lg:8px;
+  --xs:0 1px 2px rgba(0,0,0,.06);--sm:0 1px 4px rgba(0,0,0,.08);
+  --md:0 4px 16px rgba(0,0,0,.10);--lg:0 16px 48px rgba(0,0,0,.14);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--surface);color:var(--text);font-size:13px;line-height:1.5;min-height:100vh}
+
+/* ── HEADER ──────────────────────────────────────────────────── */
+.hdr{background:var(--navy);height:52px;padding:0 24px;display:flex;align-items:center;gap:20px;position:sticky;top:0;z-index:100;border-bottom:1px solid var(--navy-bd)}
+.hdr-logo{display:flex;align-items:center;gap:9px;color:var(--white);font-size:14px;font-weight:700;letter-spacing:-.03em;white-space:nowrap}
+.hdr-logo span{color:var(--blue-lt)}
+.hdr-logo-mark{width:26px;height:26px;background:var(--blue);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;color:white}
+.hdr-sep{width:1px;height:20px;background:var(--navy-bd);flex-shrink:0}
+.hdr-nav{display:flex;gap:1px}
+.hdr-nb{padding:5px 11px;border-radius:var(--r);font-size:12px;color:var(--slate-lt);cursor:pointer;border:none;background:transparent;font-family:var(--font);transition:all .15s;white-space:nowrap}
+.hdr-nb:hover{color:white;background:var(--navy-light)}.hdr-nb.on{color:white;background:var(--navy-light);font-weight:500}
+.hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--blue);color:white;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+
+/* ── BUTTONS ─────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;border:none;font-family:var(--font);white-space:nowrap;flex-shrink:0}
+.btn-primary{background:var(--blue);color:white}.btn-primary:hover{background:var(--blue-lt)}
+.btn-secondary{background:white;color:var(--text-mid);border:1px solid var(--border);box-shadow:var(--xs)}.btn-secondary:hover{background:var(--surface)}
+
+/* ── HUB ─────────────────────────────────────────────────────── */
+.main{padding:22px 24px;max-width:1440px}
+.pg-row{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap}
+.pg-title{font-size:18px;font-weight:600;color:var(--text);letter-spacing:-.03em}
+.pg-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
+.card{background:white;border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px;box-shadow:var(--xs)}
+.card-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:5px}
+.card-val{font-size:20px;font-weight:700;font-family:var(--mono);letter-spacing:-.03em}
+.card-val.blue{color:var(--blue)}.card-val.green{color:var(--green)}.card-val.amber{color:var(--amber)}.card-val.red{color:var(--red)}
+.card-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+.filters{display:flex;gap:7px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.search{padding:6px 11px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-family:var(--font);background:white;color:var(--text);width:200px;outline:none}
+.search:focus{border-color:var(--blue)}
+.chip{padding:4px 11px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:white;color:var(--text-muted);transition:all .15s;white-space:nowrap}
+.chip:hover,.chip.on{background:var(--navy);color:white;border-color:var(--navy)}
+.sort-select{font-size:11px;border:1px solid var(--border);border-radius:var(--r);padding:4px 8px;font-family:var(--font);background:white;color:var(--text-mid);cursor:pointer}
+.tbl-outer{overflow-x:auto}
+.tbl-wrap{background:white;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--xs);overflow:hidden;min-width:900px}
+.tbl{width:100%;border-collapse:collapse}
+.tbl thead{background:var(--off-white);border-bottom:1px solid var(--border)}
+.tbl th{padding:9px 14px;text-align:left;font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr{cursor:pointer;transition:background .1s}.tbl tbody tr:hover{background:#f8faff}
+.acc-cell{display:flex;align-items:center;gap:9px}
+.acc-av{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;flex-shrink:0}
+.acc-name{font-size:13px;font-weight:600;color:var(--text);line-height:1.2}.acc-ind{font-size:11px;color:var(--text-muted)}
+.tier{display:inline-flex;align-items:center;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;font-family:var(--mono)}
+.t1{background:var(--navy);color:white}.t2{background:var(--surface);color:var(--text-mid);border:1px solid var(--border)}.t3{background:var(--surface);color:var(--slate);border:1px solid var(--border)}
+.rag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500}
+.rag::before{content:'';width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+.rag-g{color:var(--green)}.rag-g::before{background:var(--green);box-shadow:0 0 0 2px #dcfce7}
+.rag-a{color:var(--amber)}.rag-a::before{background:#f59e0b;box-shadow:0 0 0 2px #fef3c7}
+.rag-r{color:var(--red)}.rag-r::before{background:var(--red);box-shadow:0 0 0 2px #fee2e2}
+.att{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:500;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.att-r{background:var(--red-pale);color:var(--red)}.att-a{background:var(--amber-pale);color:var(--amber)}.att-n{color:var(--text-muted);font-size:11px}
+.prog-wrap{display:flex;align-items:center;gap:7px;min-width:110px}
+.prog-bg{flex:1;height:4px;background:var(--surface);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;border-radius:2px;background:var(--blue)}.prog-fill.done{background:var(--green)}
+.prog-pct{font-size:11px;font-weight:600;color:var(--text-mid);font-family:var(--mono);min-width:28px}
+.plan-st{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:500;white-space:nowrap}
+.st-active{background:var(--blue-pale);color:var(--blue)}.st-draft{background:var(--amber-pale);color:var(--amber)}.st-none{background:var(--surface);color:var(--slate)}
+.row-acts{display:flex;gap:4px;opacity:0;transition:opacity .15s}.tbl tbody tr:hover .row-acts{opacity:1}
+.row-btn{padding:4px 9px;border-radius:3px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:white;color:var(--text-mid);font-family:var(--font);transition:all .15s;white-space:nowrap}
+.row-btn:hover{background:var(--navy);color:white;border-color:var(--navy)}.row-btn.pri{background:var(--blue);color:white;border-color:var(--blue)}.row-btn.pri:hover{background:var(--blue-lt)}
+.api-notice{background:var(--blue-pale);border:1px solid #bfdbfe;border-radius:var(--r);padding:8px 12px;font-size:11px;color:var(--blue);margin-bottom:14px;display:flex;gap:8px;align-items:flex-start}
+
+/* ── OVERLAY / PANEL ─────────────────────────────────────────── */
+.overlay{position:fixed;inset:0;background:rgba(14,30,53,.45);z-index:200;opacity:0;pointer-events:none;transition:opacity .25s;backdrop-filter:blur(2px)}
+.overlay.on{opacity:1;pointer-events:all}
+.panel{position:fixed;top:0;right:0;bottom:0;width:96%;max-width:1440px;background:var(--off-white);z-index:201;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .32s cubic-bezier(.16,1,.3,1);box-shadow:var(--lg)}
+.panel.on{transform:translateX(0)}
+
+/* ── PANEL HEADER ────────────────────────────────────────────── */
+.p-hdr{background:var(--navy);padding:0 16px;height:52px;display:flex;align-items:center;gap:12px;flex-shrink:0;border-bottom:1px solid var(--navy-bd)}
+.p-close{width:28px;height:28px;border-radius:5px;border:1px solid var(--navy-bd);background:transparent;color:var(--slate-lt);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .15s;flex-shrink:0}
+.p-close:hover{background:var(--navy-light);color:white}
+.p-acc-name{font-size:14px;font-weight:600;color:white;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+.p-acc-meta{font-size:11px;color:var(--slate-lt);white-space:nowrap}
+.p-tabs{display:flex;gap:1px;margin-left:8px;flex-shrink:0}
+.p-tab{padding:5px 11px;border-radius:var(--r);font-size:12px;font-weight:500;cursor:pointer;color:var(--slate-lt);border:none;background:transparent;transition:all .15s;font-family:var(--font);white-space:nowrap}
+.p-tab.on{background:var(--navy-light);color:white}.p-tab:hover{color:white}
+.p-hdr-right{margin-left:auto;display:flex;gap:6px;align-items:center;flex-shrink:0}
+.sit-toggle{display:none;align-items:center;gap:5px;padding:5px 9px;border-radius:var(--r);font-size:11px;color:var(--slate-lt);border:1px solid var(--navy-bd);background:transparent;cursor:pointer;font-family:var(--font);white-space:nowrap;transition:all .15s;flex-shrink:0}
+.sit-toggle:hover{background:var(--navy-light);color:white}
+
+/* ── PANEL BODY ──────────────────────────────────────────────── */
+.p-body{flex:1;display:flex;overflow:hidden}
+
+/* ── LEFT — SITUATION (widened to 320px) ────────────────────── */
+.p-left{width:320px;flex-shrink:0;background:white;border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+.p-left::-webkit-scrollbar{width:3px}.p-left::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.p-sec{padding:14px 16px;border-bottom:1px solid var(--border)}
+.p-sec:last-child{border-bottom:none}
+.sec-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:9px;display:flex;align-items:center;justify-content:space-between}
+.sec-toggle{font-size:10px;font-weight:500;color:var(--blue);cursor:pointer;letter-spacing:0;text-transform:none;border:none;background:none;font-family:var(--font)}
+.stat-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.stat-k{font-size:11px;color:var(--text-muted)}.stat-v{font-size:12px;font-weight:600;color:var(--text)}
+.stat-v.blue{color:var(--blue)}.stat-v.green{color:var(--green)}
+.rel-bar{height:4px;background:var(--surface);border-radius:2px;overflow:hidden;margin-top:4px;margin-bottom:8px}
+.rel-fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--blue));border-radius:2px}
+.open-text{font-size:11px;color:var(--text-mid);line-height:1.65;font-style:italic;max-height:54px;overflow:hidden;transition:max-height .3s ease}
+.open-text.expanded{max-height:500px}
+.rev-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px}
+.rev-cell{background:var(--surface);border-radius:var(--r);padding:9px 6px;text-align:center}
+.rev-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:3px}
+.rev-val{font-size:14px;font-weight:700;font-family:var(--mono)}
+.rev-val.lo{color:var(--slate)}.rev-val.md{color:var(--blue)}.rev-val.hi{color:var(--green)}
+.fc-text{font-size:11px;color:var(--text-mid);line-height:1.6}
+.sig-item{display:flex;gap:6px;margin-bottom:5px;align-items:flex-start}
+.sig-dot{width:5px;height:5px;border-radius:50%;background:var(--green);margin-top:5px;flex-shrink:0}
+.sig-text{font-size:11px;color:var(--text-mid);line-height:1.5}
+/* Insight highlight pulse — triggered by rationale scroll-to */
+.insight-highlight{border-radius:var(--r);animation:insightPulse .8s ease 2;outline:2px solid var(--blue)}
+@keyframes insightPulse{0%,100%{background:transparent}50%{background:var(--blue-pale)}}
+.wo-item{background:var(--red-pale);border-left:2px solid var(--red);padding:7px 9px;border-radius:0 3px 3px 0;margin-bottom:5px;font-size:11px;color:#991b1b;line-height:1.5;transition:outline .1s}
+.wo-item.insight-highlight{outline:2px solid var(--red)}
+.lim-item{display:flex;gap:6px;margin-bottom:4px;font-size:11px;color:var(--text-muted);line-height:1.5;align-items:flex-start}
+.lim-collapsed{display:none}
+
+/* ── RIGHT WRAP ──────────────────────────────────────────────── */
+.p-right-wrap{flex:1;display:flex;overflow:hidden;min-width:0}
+
+/* Contact Strip */
+.contact-strip-wrap{flex-shrink:0;background:white;border-bottom:1px solid var(--border);display:none}
+.contact-strip{padding:10px 16px;display:flex;align-items:center;gap:8px;overflow-x:auto}
+.contact-strip::-webkit-scrollbar{height:3px}.contact-strip::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.cs-item{display:flex;align-items:center;gap:8px;padding:6px 11px;border-radius:var(--r-lg);border:1px solid var(--border);background:var(--off-white);cursor:pointer;transition:all .15s;flex-shrink:0;min-width:160px}
+.cs-item:hover{border-color:var(--blue-lt);background:var(--blue-pale)}
+.cs-item.cs-primary{border-left:2px solid var(--blue)}
+.cs-item.cs-risk{border-left:2px solid var(--red)}
+.cs-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0;position:relative}
+.cs-warn-dot{position:absolute;top:-2px;right:-2px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid white}
+.cs-info{min-width:0;flex:1}
+.cs-name{font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cs-jobtitle{font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.cs-role{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:1px 5px;border-radius:2px;white-space:nowrap;display:inline-block;margin-top:2px}
+.cs-r-primary{background:var(--blue-pale);color:var(--blue)}
+.cs-r-risk{background:var(--red-pale);color:var(--red)}
+.cs-r-active{background:var(--green-pale);color:var(--green)}
+.cs-more{padding:6px 12px;border-radius:var(--r-lg);border:1px solid var(--border);background:var(--surface);font-size:11px;font-weight:600;color:var(--text-mid);cursor:pointer;flex-shrink:0;white-space:nowrap;transition:all .15s}
+.cs-more:hover{background:var(--navy);color:white;border-color:var(--navy)}
+
+/* Plan / Contacts tabs */
+.p-mid-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0} /* column: strip → tabs → content */
+.p-mid-tabs{display:flex;gap:1px;padding:0 16px;background:var(--off-white);border-bottom:1px solid var(--border);flex-shrink:0}
+.p-mid-tab{padding:9px 14px;font-size:12px;font-weight:500;color:var(--text-muted);cursor:pointer;border:none;background:transparent;font-family:var(--font);border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.p-mid-tab.on{color:var(--blue);border-bottom-color:var(--blue)}.p-mid-tab:hover{color:var(--text)}
+.p-mid{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-width:0}
+.p-mid::-webkit-scrollbar{width:3px}.p-mid::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.m-sec{padding:14px 18px;border-bottom:1px solid var(--border)}.m-sec:last-child{border-bottom:none}
+.m-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+.m-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted)}
+.m-count{font-size:10px;font-weight:600;color:var(--text-muted);background:var(--surface);padding:2px 6px;border-radius:10px}
+
+/* Contact cards (Contacts tab) */
+.gap-warn{background:var(--red-pale);border:1px solid #fca5a5;border-radius:var(--r);padding:8px 11px;font-size:11px;color:var(--red);display:flex;gap:7px;align-items:flex-start;margin-bottom:8px}
+.c-row{display:flex;gap:9px;align-items:flex-start;padding:9px 11px;border-radius:var(--r);border:1px solid var(--border);margin-bottom:5px;background:white;transition:border-color .15s}
+.c-row:hover{border-color:var(--blue-lt)}.c-row.c-primary{border-left:2px solid var(--blue)}.c-row.c-risk{border-left:2px solid var(--red)}
+.c-av{width:26px;height:26px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0}
+.c-info{flex:1;min-width:0}.c-name-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:1px}
+.c-name{font-size:12px;font-weight:600;color:var(--text)}.c-title-txt{font-size:11px;color:var(--text-muted);margin-bottom:3px}
+.role-b{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:1px 5px;border-radius:2px;white-space:nowrap}
+.rb-primary{background:var(--blue-pale);color:var(--blue)}.rb-owner{background:var(--green-pale);color:var(--green)}.rb-risk{background:var(--red-pale);color:var(--red)}.rb-low{background:var(--surface);color:var(--slate)}
+.c-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.eng-b{font-size:10px;font-weight:600;padding:1px 5px;border-radius:2px}
+.eb-h{background:var(--green-pale);color:var(--green)}.eb-m{background:var(--amber-pale);color:var(--amber)}.eb-l{background:var(--red-pale);color:var(--red)}.eb-u{background:var(--surface);color:var(--slate)}
+.c-act{font-size:10px;color:var(--text-muted)}.cad-tag{font-size:9px;font-weight:600;padding:1px 5px;border-radius:2px;background:var(--teal-pale);color:var(--teal)}
+.c-note{font-size:11px;color:var(--text-muted);font-style:italic;line-height:1.4;margin-top:3px}
+
+/* ── PLAN CARDS ──────────────────────────────────────────────── */
+/* Shared card base */
+.rec,.cad,.act{position:relative}
+
+/* Rationale info button */
+.rat-btn{position:absolute;top:10px;right:10px;width:18px;height:18px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;z-index:1;font-style:italic;font-family:Georgia,serif}
+.rat-btn:hover{background:var(--navy);color:white;border-color:var(--navy)}
+
+/* Rationale popover */
+.rat-pop{display:none;position:absolute;top:32px;right:0;width:280px;background:white;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--md);z-index:50;padding:12px 14px}
+.rat-pop.open{display:block;animation:fadeUp .15s ease}
+.rat-pop-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:6px}
+.rat-pop-text{font-size:12px;color:var(--text-mid);line-height:1.6;margin-bottom:8px}
+.rat-pop-link{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--blue);cursor:pointer;border-top:1px solid var(--border);padding-top:8px;transition:color .15s}
+.rat-pop-link:hover{color:var(--blue-lt)}
+.rat-pop-link::before{content:'↳';font-size:13px;flex-shrink:0}
+
+/* Recommendation cards */
+.rec{border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 36px 13px 13px;margin-bottom:7px;background:white;transition:border-color .15s,box-shadow .15s}
+.rec:hover{border-color:var(--blue-lt);box-shadow:var(--sm)}
+.rec-hdr{display:flex;align-items:flex-start;gap:9px;margin-bottom:7px}
+.rec-num{width:20px;height:20px;border-radius:50%;background:var(--navy);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--mono)}
+.rec-prod{font-size:13px;font-weight:600;color:var(--text);line-height:1.2}.rec-type{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
+.conf-b{font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;flex-shrink:0;margin-left:auto}
+.cb-h{background:var(--green-pale);color:var(--green)}.cb-m{background:var(--amber-pale);color:var(--amber)}.cb-l{background:var(--surface);color:var(--slate)}
+.rec-val{font-size:17px;font-weight:700;color:var(--blue);font-family:var(--mono);margin-bottom:5px}
+.rec-desc{font-size:12px;color:var(--text-mid);line-height:1.5;margin-bottom:4px}
+
+/* Cadence cards */
+.cad{border:1px solid var(--border);border-radius:var(--r);padding:11px 36px 11px 13px;margin-bottom:5px;background:white;display:flex;gap:11px;align-items:flex-start}
+.cad-icon{width:30px;height:30px;border-radius:7px;background:var(--blue-pale);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.cad-name{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px}
+.cad-contact{font-size:11px;color:var(--blue);font-weight:500;margin-bottom:3px}
+.cad-chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:3px}
+.cad-chip{font-size:10px;font-weight:500;padding:1px 6px;border-radius:3px;background:var(--surface);color:var(--text-muted);border:1px solid var(--border)}
+.cad-chip.remote{background:var(--teal-pale);color:var(--teal);border-color:transparent}
+.cad-purp{font-size:11px;color:var(--text-muted);line-height:1.4}
+
+/* Action cards */
+.act{border:1px solid var(--border);border-radius:var(--r);padding:9px 36px 9px 13px;margin-bottom:5px;background:white;display:flex;gap:9px;align-items:flex-start}
+.prio-b{font-size:9px;font-weight:700;padding:2px 5px;border-radius:2px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0;margin-top:1px}
+.pb-h{background:var(--red-pale);color:var(--red)}.pb-m{background:var(--amber-pale);color:var(--amber)}.pb-l{background:var(--surface);color:var(--slate)}
+.act-desc{font-size:12px;color:var(--text);flex:1;line-height:1.5}
+.act-timing{font-size:10px;color:var(--text-muted);margin-top:2px;font-family:var(--mono)}
+
+/* ── COPILOT ─────────────────────────────────────────────────── */
+.copilot-panel{width:300px;flex-shrink:0;background:var(--navy);border-left:1px solid var(--navy-bd);display:flex;flex-direction:column;transition:width .25s ease;overflow:hidden}
+.copilot-panel.collapsed{width:40px}
+.chat-hdr{padding:12px 14px;border-bottom:1px solid var(--navy-bd);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.chat-hdr-info{flex:1;min-width:0}
+.chat-hdr-title{font-size:13px;font-weight:600;color:white;white-space:nowrap}
+.chat-hdr-sub{font-size:10px;color:var(--slate-lt);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-status{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 2px rgba(13,148,136,.3);flex-shrink:0}
+.chat-status.pulse{animation:statPulse 1.4s ease infinite}
+@keyframes statPulse{0%,100%{opacity:1;box-shadow:0 0 0 2px rgba(13,148,136,.3)}50%{opacity:.4;box-shadow:0 0 0 4px rgba(13,148,136,.15)}}
+.chat-collapse-btn{width:26px;height:26px;border-radius:5px;border:1px solid var(--navy-bd);background:transparent;color:var(--slate-lt);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .15s;flex-shrink:0;line-height:1}
+.chat-collapse-btn:hover{background:var(--navy-light);color:white}
+.copilot-panel.collapsed .chat-hdr{padding:12px 7px;justify-content:center;flex-direction:column;gap:6px;align-items:center}
+.copilot-panel.collapsed .chat-hdr-info,.copilot-panel.collapsed .chat-status{display:none}
+.copilot-panel.collapsed .chat-msgs,.copilot-panel.collapsed .q-prompts,.copilot-panel.collapsed .chat-inp-area{display:none}
+.copilot-vert{display:none;writing-mode:vertical-rl;font-size:10px;font-weight:600;color:var(--slate-lt);letter-spacing:.08em;user-select:none;margin-top:4px}
+.copilot-panel.collapsed .copilot-vert{display:block}
+.chat-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.chat-msgs::-webkit-scrollbar{width:3px}.chat-msgs::-webkit-scrollbar-thumb{background:var(--navy-bd);border-radius:2px}
+.msg{display:flex;flex-direction:column;gap:3px;animation:fadeUp .25s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.msg-bubble{padding:9px 11px;border-radius:9px;font-size:12px;line-height:1.6;max-width:92%}
+.msg.user{align-items:flex-end}
+.msg.user .msg-bubble{background:var(--blue);color:white;border-bottom-right-radius:2px}
+.msg.ai .msg-bubble{background:var(--navy-light);color:var(--off-white);border-bottom-left-radius:2px;border:1px solid var(--navy-bd)}
+.msg-time{font-size:10px;color:var(--slate-lt)}
+.q-prompts{padding:8px 12px;border-top:1px solid var(--navy-bd);display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0}
+.q-btn{font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid var(--navy-bd);color:var(--slate-lt);cursor:pointer;transition:all .15s;background:transparent;font-family:var(--font);white-space:nowrap}
+.q-btn:hover{background:var(--navy-light);color:white;border-color:var(--navy-light)}
+.chat-inp-area{padding:10px 12px;border-top:1px solid var(--navy-bd);flex-shrink:0}
+.chat-inp-wrap{display:flex;gap:7px;align-items:flex-end;background:var(--navy-light);border:1px solid var(--navy-bd);border-radius:9px;padding:7px 9px;transition:border-color .15s}
+.chat-inp-wrap:focus-within{border-color:var(--blue)}
+.chat-ta{flex:1;background:transparent;border:none;outline:none;color:white;font-size:12px;font-family:var(--font);resize:none;max-height:90px;line-height:1.5}
+.chat-ta::placeholder{color:var(--slate)}
+.send-btn{width:26px;height:26px;border-radius:5px;background:var(--blue);border:none;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:background .15s;flex-shrink:0}
+.send-btn:hover{background:var(--blue-lt)}
+
+/* ── CREATE MODE ─────────────────────────────────────────────── */
+.create-mode{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:36px;background:white;text-align:center}
+.create-icon{font-size:36px;margin-bottom:14px}
+.create-title{font-size:17px;font-weight:600;color:var(--text);margin-bottom:5px;letter-spacing:-.02em}
+.create-sub{font-size:13px;color:var(--text-muted);margin-bottom:24px;max-width:340px}
+.intent-opts{display:flex;flex-direction:column;gap:7px;width:100%;max-width:400px;margin-bottom:24px}
+.intent-opt{border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 15px;cursor:pointer;text-align:left;background:white;display:flex;gap:11px;align-items:center;transition:all .15s}
+.intent-opt:hover,.intent-opt.on{border-color:var(--blue);background:var(--blue-pale)}
+.intent-emoji{font-size:18px}.intent-lbl{font-size:13px;font-weight:600;color:var(--text)}.intent-desc{font-size:11px;color:var(--text-muted)}
+.spin{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── RESPONSIVE ──────────────────────────────────────────────── */
+@media(max-width:1200px){
+  .copilot-panel:not(.user-open){width:40px}
+  .copilot-panel:not(.user-open) .chat-hdr{padding:12px 7px;justify-content:center;flex-direction:column;gap:6px;align-items:center}
+  .copilot-panel:not(.user-open) .chat-hdr-info,.copilot-panel:not(.user-open) .chat-status{display:none}
+  .copilot-panel:not(.user-open) .chat-msgs,.copilot-panel:not(.user-open) .q-prompts,.copilot-panel:not(.user-open) .chat-inp-area{display:none}
+  .copilot-panel:not(.user-open) .copilot-vert{display:block}
+}
+@media(max-width:900px){
+  .cards{grid-template-columns:repeat(3,1fr)}
+  .p-left{position:absolute;top:52px;left:0;bottom:0;z-index:10;box-shadow:var(--md);transform:translateX(-100%);transition:transform .25s ease}
+  .p-left.mobile-open{transform:translateX(0)}
+  .sit-toggle{display:inline-flex}
+}
+@media(max-width:700px){
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .p-hdr-right .btn-secondary{display:none}
+  .p-acc-name{max-width:160px}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-logo">
+    <div class="hdr-logo-mark">◈</div>
+    Accord<span>In</span>
+  </div>
+  <div class="hdr-sep"></div>
+  <nav class="hdr-nav">
+    <button class="hdr-nb on">My Accounts</button>
+    <button class="hdr-nb">Portfolio</button>
+    <button class="hdr-nb">Plan Archive</button>
+    <button class="hdr-nb">Analytics</button>
+  </nav>
+  <div class="hdr-right">
+    <button class="btn btn-primary" onclick="openCreatePanel()">+ New Plan</button>
+    <div class="avatar">WR</div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="pg-row">
+    <div><div class="pg-title">My Account Plans</div><div class="pg-sub" id="pgSub">Loading from Dataverse...</div></div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap">
+      <button class="btn btn-secondary">⬇ Export</button>
+      <button class="btn btn-secondary">⚙ Configure</button>
+    </div>
+  </div>
+  <div class="api-notice" id="apiNotice">ℹ Running in standalone mode with mock data. When deployed as a D365 web resource, this page reads live data via the Dataverse Web API.</div>
+  <script>if(typeof Xrm!=='undefined'||(window.parent&&typeof window.parent.Xrm!=='undefined'))document.getElementById('apiNotice').style.display='none';</script>
+  <div class="cards">
+    <div class="card"><div class="card-label">Active Plans</div><div class="card-val blue" id="cActive">—</div><div class="card-sub" id="cActiveSub">Loading...</div></div>
+    <div class="card"><div class="card-label">Combined Target</div><div class="card-val" id="cTarget">—</div><div class="card-sub">Stage-weighted pipeline</div></div>
+    <div class="card"><div class="card-label">Achieved YTD</div><div class="card-val green" id="cAchieved">—</div><div class="card-sub" id="cAchievedSub">Loading...</div></div>
+    <div class="card"><div class="card-label">Require Attention</div><div class="card-val amber" id="cAttention">—</div><div class="card-sub">Approval risks or stalled</div></div>
+    <div class="card"><div class="card-label">Overdue Cadences</div><div class="card-val red" id="cCadences">—</div><div class="card-sub">Across active accounts</div></div>
+  </div>
+  <div class="filters">
+    <input type="text" class="search" placeholder="🔍  Search accounts..." oninput="filterAccounts(this.value)">
+    <button class="chip on" onclick="setFilter('all',this)">All</button>
+    <button class="chip" onclick="setFilter('tier1',this)">Tier 1</button>
+    <button class="chip" onclick="setFilter('tier2',this)">Tier 2</button>
+    <button class="chip" onclick="setFilter('attention',this)">⚠ Attention</button>
+    <button class="chip" onclick="setFilter('noplan',this)">No Plan</button>
+    <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+      <span style="font-size:11px;color:var(--text-muted)">Sort:</span>
+      <select class="sort-select" onchange="sortAccounts(this.value)">
+        <option value="rag">Health</option><option value="target">Plan Target</option>
+        <option value="name">Account Name</option><option value="updated">Last Updated</option>
+      </select>
+    </div>
+  </div>
+  <div class="tbl-outer"><div class="tbl-wrap"><table class="tbl">
+    <thead><tr>
+      <th style="width:220px">Account</th><th>Tier</th><th>Plan</th><th>Health</th>
+      <th>Requires Attention</th><th>Progress</th><th>Target (Mid)</th><th>Last Updated</th><th style="width:150px"></th>
+    </tr></thead>
+    <tbody id="tblBody"></tbody>
+  </table></div></div>
+</main>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+
+<!-- PLAN PANEL -->
+<div class="panel" id="panel">
+  <div class="p-hdr">
+    <button class="p-close" onclick="closePanel()">✕</button>
+    <button class="sit-toggle" onclick="toggleSituation()">≡ Situation</button>
+    <div><div class="p-acc-name" id="pAccName">—</div><div class="p-acc-meta" id="pAccMeta">—</div></div>
+    <div class="p-tabs">
+      <button class="p-tab on" onclick="switchTab('view',this)">Account Plan</button>
+      <button class="p-tab" onclick="switchTab('create',this)">+ New Plan</button>
+      <button class="p-tab" onclick="switchTab('history',this)">History</button>
+    </div>
+    <div class="p-hdr-right">
+      <button class="btn btn-secondary" style="font-size:11px;padding:5px 10px">⬇ Export</button>
+      <button class="btn btn-primary" style="font-size:11px;padding:5px 10px" onclick="approvePlan()">✓ Approve</button>
+    </div>
+  </div>
+
+  <div class="p-body">
+    <!-- LEFT: SITUATION -->
+    <div class="p-left" id="pLeft">
+      <div class="p-sec" id="secSnapshot"><div class="sec-lbl">Account Snapshot</div><div id="accSnapshot"></div></div>
+      <div class="p-sec" id="secAssess">
+        <div class="sec-lbl">
+          <span id="assessLbl">Strategic Assessment</span>
+          <button class="sec-toggle" id="assessToggle" onclick="toggleAssess()">more</button>
+        </div>
+        <div class="open-text" id="openText">—</div>
+      </div>
+      <div class="p-sec" id="secForecast">
+        <div class="sec-lbl">Revenue Forecast</div>
+        <div class="rev-grid">
+          <div class="rev-cell"><div class="rev-lbl">Low</div><div class="rev-val lo" id="revLo">—</div></div>
+          <div class="rev-cell"><div class="rev-lbl">Target</div><div class="rev-val md" id="revMd">—</div></div>
+          <div class="rev-cell"><div class="rev-lbl">High</div><div class="rev-val hi" id="revHi">—</div></div>
+        </div>
+        <div class="fc-text" id="fcText">—</div>
+      </div>
+      <div class="p-sec" id="secSignals"><div class="sec-lbl" id="sigsLbl">Positive Signals</div><div id="posSigs"></div></div>
+      <div class="p-sec" id="secWatchouts"><div class="sec-lbl">Watchouts</div><div id="watchouts"></div></div>
+      <div class="p-sec">
+        <div class="sec-lbl">Data Limitations <button class="sec-toggle" onclick="toggleLimits(this)">show</button></div>
+        <div id="dataLims" class="lim-collapsed"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="p-right-wrap">
+      <!-- Plan / Contacts tabs — contact strip sits inside here, stacks vertically above tabs -->
+      <div class="p-mid-wrap">
+        <div class="contact-strip-wrap" id="contactStripWrap" style="display:none">
+          <div class="contact-strip" id="contactStrip"></div>
+        </div>
+        <div class="p-mid-tabs" id="pMidTabs" style="display:none">
+          <button class="p-mid-tab on" onclick="switchMidTab('plan',this)">Plan</button>
+          <button class="p-mid-tab" onclick="switchMidTab('contacts',this)">Contacts</button>
+        </div>
+        <div class="p-mid" id="pMid"></div>
+      </div>
+      <!-- Copilot -->
+      <div class="copilot-panel" id="copilotPanel">
+        <div class="chat-hdr">
+          <button class="chat-collapse-btn" id="collapseBtn" onclick="toggleCopilot()" title="Toggle copilot">›</button>
+          <div class="chat-hdr-info"><div class="chat-hdr-title">Copilot</div><div class="chat-hdr-sub" id="chatSub">Ready</div></div>
+          <div class="chat-status" id="chatStatus"></div>
+          <div class="copilot-vert">COPILOT</div>
+        </div>
+        <div class="chat-msgs" id="chatMsgs"></div>
+        <div class="q-prompts" id="qPrompts"></div>
+        <div class="chat-inp-area">
+          <div class="chat-inp-wrap">
+            <textarea class="chat-ta" id="chatTa" placeholder="Ask about this plan or request changes..." rows="2"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+            <button class="send-btn" onclick="sendChat()">↑</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATAVERSE API LAYER
+// ═══════════════════════════════════════════════════════════════
+const API = {
+  xrm:()=>(typeof Xrm!=='undefined'&&Xrm)||(typeof window.parent!=='undefined'&&typeof window.parent.Xrm!=='undefined'&&window.parent.Xrm)||null,
+  isD365:()=>API.xrm()!==null,
+  async get(e,o){if(!API.isD365())return{entities:[]};return API.xrm().WebApi.retrieveMultipleRecords(e,o)},
+  async getRecord(e,id,o){if(!API.isD365())return null;return API.xrm().WebApi.retrieveRecord(e,id,o)},
+  async post(e,d){if(!API.isD365())return null;const r=await API.xrm().WebApi.createRecord(e,d);return r.id},
+  async patch(e,id,d){if(!API.isD365())return null;await API.xrm().WebApi.updateRecord(e,id,d)},
+  async getAccounts(){
+    const xrm=API.xrm();
+    const as=['accountid','name','industrycode','wrl_accounttier','wrl_ragstatus','wrl_planstatus','wrl_requiresattention','wrl_plantarget','wrl_actualrevenueytd','wrl_planprogress','wrl_relationshipscore'].join(',');
+    const ps=['wrl_accountplanid','wrl_planname','wrl_planstatus','wrl_plantype','wrl_planintent','wrl_revenuetarget','wrl_actualrevenue','wrl_healthsummary','wrl_aiopeningstatement','wrl_growthobjectives','wrl_planpayload','wrl_generatedtimestamp','wrl_confirmationtimestamp','modifiedon','_wrl_account_value'].join(',');
+    const[accounts,plans]=await Promise.all([
+      xrm.WebApi.retrieveMultipleRecords('account',`?$select=${as}&$filter=wrl_accounttier ne null&$orderby=name asc`),
+      xrm.WebApi.retrieveMultipleRecords('wrl_accountplan',`?$select=${ps}&$orderby=modifiedon desc`)
+    ]);
+    const pm={};
+    for(const p of(plans.entities||[])){const aid=p._wrl_account_value;if(aid&&!pm[aid])pm[aid]=p;}
+    return{entities:accounts.entities||[],planMap:pm};
+  },
+  async getCadences(id){return API.get('wrl_engagementcadence',`?$select=wrl_engagementcadenceid,wrl_cadencename,wrl_contactname,wrl_frequency,wrl_communicationchannel,wrl_purpose,wrl_rationale,wrl_locationawareness,wrl_status&$filter=_wrl_accountplan_value eq '${id}'`)},
+  async getActions(id){return API.get('wrl_actionplan',`?$select=wrl_actionplanid,wrl_actiondescription,wrl_prioritylevel,wrl_communicationchannel,wrl_suggestedtiming,wrl_rationale,wrl_currentstatus&$filter=_wrl_accountplan_value eq '${id}'`)},
+  async getRecommendations(id){return API.get('wrl_planrecommendation',`?$select=wrl_planrecommendationid,wrl_productname,wrl_recommendationtype,wrl_description,wrl_rationale,wrl_estimatedvalue,wrl_confidence,wrl_confidencereason,wrl_sortorder&$filter=_wrl_accountplan_value eq '${id}'&$orderby=wrl_sortorder asc`)},
+  async saveMessage(pid,content,role,seq){await API.post('wrl_conversationmessage',{wrl_messagecontent:content,wrl_userrole:role==='user'?0:1,wrl_messagetimestamp:new Date().toISOString(),wrl_messagesequence:seq,'wrl_AccountPlan@odata.bind':`/wrl_accountplans(${pid})`})}
+};
+function mapCadenceFrequency(f){return{monthly:1,biweekly:2,quarterly:3,weekly:4,'ad-hoc':5}[(f||'').toLowerCase()]??1}
+function mapCadenceChannel(c){return{'online-meeting':0,phone:1,'in-person':2,event:3,email:4}[c]??0}
+function mapCadenceStatus(s){return{suggested:0,confirmed:1,active:2,paused:3}[(s||'').toLowerCase()]??0}
+function mapActionChannel(c){return{meeting:1,'online-meeting':1,email:2,event:3,call:4,phone:4,other:5}[c]??1}
+function mapActionStatus(s){return{planned:1,activated:2,completed:3,skipped:4}[(s||'').toLowerCase()]??1}
+function mapPriority(p){return{high:1,medium:2,low:3}[p]||2}
+function mapRecType(t){return{'cross-sell':1,upsell:2,retention:3,relationship:4}[t]||1}
+function mapConfidence(c){return{high:1,medium:2,low:3}[c]||2}
+
+// ═══════════════════════════════════════════════════════════════
+// MOCK DATA
+// ═══════════════════════════════════════════════════════════════
+const MOCK_ACCOUNTS=[
+  {id:'ACC-001',name:'Apple Global Logistics',industry:'Consumer Electronics',tier:1,planStatus:'active',rag:'amber',attention:{level:'amber',text:'Finance Controller disengaged since Nov 2025'},progress:45,target:1761500,achieved:792675,lastUpdated:'Today'},
+  {id:'ACC-002',name:'DP World Ports & Logistics',industry:'Global Trade & Logistics',tier:1,planStatus:'active',rag:'green',attention:{level:'none',text:'On track'},progress:68,target:4200000,achieved:2856000,lastUpdated:'2 days ago'},
+  {id:'ACC-003',name:'Gulf Maritime Holdings',industry:'Maritime Logistics',tier:1,planStatus:'active',rag:'red',attention:{level:'red',text:'Legal Counsel disengaged — contract blocked'},progress:22,target:881000,achieved:193820,lastUpdated:'3 days ago'},
+  {id:'ACC-004',name:'NorthStar Retail Group',industry:'Retail',tier:1,planStatus:'active',rag:'green',attention:{level:'none',text:'On track'},progress:71,target:57000,achieved:40470,lastUpdated:'1 week ago'},
+  {id:'ACC-005',name:'Meridian Financial Services',industry:'Financial Services',tier:2,planStatus:'active',rag:'amber',attention:{level:'amber',text:'Procurement approval pending 3 weeks'},progress:38,target:97250,achieved:36955,lastUpdated:'4 days ago'},
+  {id:'ACC-006',name:'Stormfield Energy',industry:'Energy',tier:1,planStatus:'active',rag:'red',attention:{level:'red',text:'Negotiation stalled — no activity 6 weeks'},progress:15,target:232250,achieved:34838,lastUpdated:'2 weeks ago'},
+  {id:'ACC-007',name:'Vertex Manufacturing Ltd',industry:'Industrial Manufacturing',tier:2,planStatus:'draft',rag:'amber',attention:{level:'amber',text:'Discovery plan only — no pipeline yet'},progress:0,target:0,achieved:0,lastUpdated:'5 days ago'},
+  {id:'ACC-008',name:'Redstone Pharma Ltd',industry:'Pharmaceuticals',tier:2,planStatus:'none',rag:'amber',attention:{level:'amber',text:'No plan — single contact only'},progress:0,target:0,achieved:0,lastUpdated:'Never'}
+];
+const MOCK_PLAN={
+  openingStatement:"The Jebel Ali Port Premium Berthing and Terminal Services Agreement reached Negotiation stage on 2026-02-13, and the operations team submitted a formal warehousing proposal request on 2026-01-24 — two signals indicating active decision-making on the ground. With the VP Global Supply Chain engaged in an account expansion review on 2026-02-19 and container tracking product pages visited on 2026-02-15, this is the right moment to consolidate the expansion narrative across Contract Logistics and Digital Supply Chain tools.",
+  healthSummary:"Account health is strong with a relationship score of 81, confirmed freight renewals, and high engagement across five of six senior contacts. Finance Controller disengagement since November 2025 is the primary risk to pipeline progression.",
+  positiveSignals:["Freight Forwarding — Asia to Middle East renewal confirmed on 2026-01-05.","Asia to Middle East shipment volume increased 19% Q4 2025 vs Q3 2025.","Operations team submitted warehousing proposal request for Dubai on 2026-01-24.","Digital team requested bundled pricing for container tracking, alerting, and analytics on 2026-02-08.","VP Global Supply Chain engaged in global account expansion review on 2026-02-19."],
+  watchouts:["Finance Controller Sophia Martinez has had no engagement since 2025-11-22, despite £3.84M in open pipeline. Budget approval for any of the seven active opportunities may stall without her involvement.","Europe Spare Parts Warehousing remains in Discovery with no activity since 2026-02-03 — progression risk.","Control Tower Dashboard in Discovery with no follow-up since the 2026-02-10 demo."],
+  contactEngagement:[
+    {name:"Laura Chen",title:"Global Director of Logistics",engagementLevel:"High",lastActivity:"2026-02-18",planRole:"primary-relationship",hasCadence:true,strategicNote:"Primary strategic relationship anchor across all seven opportunities. Most senior contact with highest engagement and most recent activity."},
+    {name:"Michael O'Connor",title:"VP Global Supply Chain",engagementLevel:"Medium",lastActivity:"2026-02-19",planRole:"opportunity-owner",hasCadence:true,strategicNote:"Participated in global account expansion review on 2026-02-19. Key decision-maker for supply chain transformation."},
+    {name:"Ravi Menon",title:"Regional Operations Director – Middle East",engagementLevel:"High",lastActivity:"2026-02-14",planRole:"opportunity-owner",hasCadence:true,strategicNote:"Primary owner of Dubai RDC and Jebel Ali opportunities. High engagement with port commercial review on 2026-02-14."},
+    {name:"Elena Fischer",title:"Director of Distribution Operations – Europe",engagementLevel:"High",lastActivity:"2026-02-11",planRole:"opportunity-owner",hasCadence:false,strategicNote:"Owns Europe Spare Parts Warehousing opportunity. Downloaded whitepaper on 2026-02-04."},
+    {name:"Daniel Brooks",title:"Head of Logistics Technology",engagementLevel:"High",lastActivity:"2026-02-16",planRole:"opportunity-owner",hasCadence:false,strategicNote:"Owns Supply Chain Visibility Platform and Digital Exception Alerting opportunities."},
+    {name:"Sophia Martinez",title:"Finance Controller – Global Logistics",engagementLevel:"Low",lastActivity:"2025-11-22",planRole:"approval-risk",hasCadence:false,strategicNote:"Controls budget approval for all seven pipeline opportunities. Disengaged since November 2025 — single highest risk to pipeline progression."}
+  ],
+  revenuePicture:{pipelineValue:3840000,totalLow:612000,totalMid:1761500,totalHigh:3840000},
+  revenueTarget:1761500,
+  forecastNarrative:"The Jebel Ali Port Agreement at £720,000 in Negotiation provides the revenue floor at 85% confidence (£612,000). Propose stage opportunities add weighted contributions at 65%. The high scenario requires Finance Controller re-engagement to unblock approvals across all seven deals.",
+  recommendations:[
+    {type:"cross-sell",productName:"Jebel Ali Port Premium Berthing and Terminal Services",description:"Close the Negotiation-stage Jebel Ali Port agreement — the highest-stage and nearest-to-close opportunity.",rationale:"Commercial review completed on 2026-02-13 with Ravi Menon. Close date is 2026-07-15. This is the primary near-term revenue driver at 85% confidence.",estimatedValue:720000,confidence:"high",confidenceReason:"Negotiation stage with recent commercial review.",insightRef:"forecast"},
+    {type:"cross-sell",productName:"Digital Supply Chain Bundle",description:"Progress the Supply Chain Visibility Platform and Digital Exception Alerting as a bundled solution.",rationale:"Digital team requested bundled pricing on 2026-02-08. Daniel Brooks attended the supply chain visibility webinar on 2026-01-30. Both opportunities are in Propose stage at 65% confidence.",estimatedValue:430000,confidence:"medium",confidenceReason:"Propose stage with strong engagement but Finance Controller approval pending.",insightRef:"signal:3"},
+    {type:"cross-sell",productName:"Dubai Regional Distribution Centre",description:"Advance the Dubai RDC Contract Logistics opportunity from Qualify to Propose.",rationale:"Operations team submitted formal warehousing proposal request on 2026-01-24. Discovery workshop completed with Ravi Menon.",estimatedValue:380000,confidence:"medium",confidenceReason:"Qualify stage with validated interest.",insightRef:"signal:2"}
+  ],
+  cadences:[
+    {name:"Strategic Expansion Review — Global Director of Logistics",contactTitle:"Global Director of Logistics",contactName:"Laura Chen",frequency:"monthly",channel:"online-meeting",locationAware:true,purpose:"Maintain executive alignment across all seven pipeline opportunities.",rationale:"Laura Chen is the primary relationship contact with High engagement. Most recent activity on 2026-02-18. Remote in Singapore.",insightRef:"watchout:0"},
+    {name:"Jebel Ali Negotiation Closure — Regional Operations Director",contactTitle:"Regional Operations Director – Middle East",contactName:"Ravi Menon",frequency:"biweekly",channel:"in-person",locationAware:true,purpose:"Drive the Jebel Ali Port agreement to signature.",rationale:"Ravi Menon has High engagement with last activity on 2026-02-14. In-person in Dubai appropriate given Negotiation stage urgency and the commercial review completed on 2026-02-13.",insightRef:"forecast"},
+    {name:"Finance Controller Re-engagement — Budget Approval",contactTitle:"Finance Controller – Global Logistics",contactName:"Sophia Martinez",frequency:"monthly",channel:"online-meeting",locationAware:true,purpose:"Re-establish engagement and secure budget visibility for all open opportunities.",rationale:"Sophia Martinez has been disengaged since 2025-11-22. Her approval is required for all seven pipeline opportunities totalling £3.84M.",insightRef:"watchout:0"}
+  ],
+  oneOffActions:[
+    {description:"Send Finance Controller Sophia Martinez a consolidated financial summary covering all seven open opportunities and their combined approval requirements.",channel:"email",priority:"high",suggestedTiming:"Within 1 week",rationale:"Sophia Martinez has not engaged since 2025-11-22. The Jebel Ali deal in Negotiation stage requires her budget approval to close.",insightRef:"watchout:0"},
+    {description:"Submit a formal proposal for the Digital Supply Chain bundle to Daniel Brooks following the 2026-02-08 pricing request.",channel:"online-meeting",priority:"high",suggestedTiming:"Within 2 weeks",rationale:"The digital team formally requested bundled pricing on 2026-02-08 — this is a high-intent buying signal that needs to be followed up before momentum is lost.",insightRef:"signal:3"},
+    {description:"Follow up with Elena Fischer on Europe Spare Parts Warehousing requirements from the 2026-02-03 discussion.",channel:"online-meeting",priority:"medium",suggestedTiming:"Within 2 weeks",rationale:"Europe Spare Parts Warehousing has had no activity since 2026-02-03. Elena Fischer expressed interest in spare parts storage but the opportunity may stall without follow-up.",insightRef:"watchout:1"},
+    {description:"Schedule a Control Tower Dashboard use-case refinement session with the APAC operations team.",channel:"online-meeting",priority:"low",suggestedTiming:"2026-03-15",rationale:"The demo on 2026-02-10 generated interest but no follow-up has been scheduled. The opportunity remains in Discovery and needs qualification.",insightRef:"watchout:2"}
+  ],
+  dataLimitations:["Finance Controller Sophia Martinez has had no engagement since 2025-11-22 — budget approval timeline for all seven opportunities is unknown.","No pricing confirmation or budget signals available despite Negotiation and Propose stage opportunities.","Europe Spare Parts Warehousing and Control Tower Dashboard have had no follow-up activity — qualification status is unclear."]
+};
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let allAccounts=[],currentFilter='all',currentSearch='',msgCount=1;
+let currentPlanId=null,currentAccountId=null,currentAccount=null;
+let currentPlanMode='new',copilotOpen=false,currentPlan=null;
+let chatHistory=[]; // persists across renderPlan() calls for the current session
+let chatBusy=false;
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+async function init(){
+  if(API.isD365()){
+    try{const d=await API.getAccounts();allAccounts=transformD365Data(d);}
+    catch(e){console.error('[AccordIn] init:',e);allAccounts=[];document.getElementById('apiNotice').textContent=`⚠ Failed to load: ${e.message}`;document.getElementById('apiNotice').style.display='flex';}
+  }else{allAccounts=MOCK_ACCOUNTS;}
+  renderSummary();renderTable();
+  document.getElementById('pgSub').textContent=`Q1 2026 · ${allAccounts.length} accounts · ${API.isD365()?'Live from Dataverse':'Mock data'}`;
+  // Copilot starts collapsed; opens when plan loads
+  applyCollapseState();
+}
+function transformD365Data({entities,planMap}){
+  return entities.map(acc=>{
+    const p=planMap[acc.accountid]||{};
+    return{id:p.wrl_accountplanid||acc.accountid,accountId:acc.accountid,name:acc.name||'Unknown',industry:acc['industrycode@OData.Community.Display.V1.FormattedValue']||'—',tier:acc.wrl_accounttier||2,planStatus:mapPlanStatus(p.wrl_planstatus),rag:mapRAG(acc.wrl_ragstatus),attention:{level:mapAttLevel(acc.wrl_ragstatus),text:acc.wrl_requiresattention||'On track'},progress:acc.wrl_planprogress||0,target:acc.wrl_plantarget||p.wrl_revenuetarget||0,achieved:acc.wrl_actualrevenueytd||p.wrl_actualrevenue||0,lastUpdated:p.modifiedon?new Date(p.modifiedon).toLocaleDateString('en-GB'):'—',planPayload:p.wrl_planpayload?JSON.parse(p.wrl_planpayload):null,rawPlan:p};
+  });
+}
+function mapPlanStatus(v){return{0:'draft',1:'active',2:'closed'}[v]||'none'}
+function mapRAG(v){return{1:'green',2:'amber',3:'red'}[v]||'amber'}
+function mapAttLevel(v){return{1:'none',2:'amber',3:'red'}[v]||'amber'}
+
+// ═══════════════════════════════════════════════════════════════
+// SUMMARY + TABLE
+// ═══════════════════════════════════════════════════════════════
+function renderSummary(){
+  const active=allAccounts.filter(a=>a.planStatus==='active').length;
+  const total=allAccounts.filter(a=>a.planStatus!=='none').length;
+  const target=allAccounts.reduce((s,a)=>s+(a.target||0),0);
+  const achieved=allAccounts.reduce((s,a)=>s+(a.achieved||0),0);
+  const attention=allAccounts.filter(a=>a.attention.level!=='none').length;
+  document.getElementById('cActive').textContent=active;
+  document.getElementById('cActiveSub').textContent=`${total} total plans`;
+  document.getElementById('cTarget').textContent=fmt(target);
+  document.getElementById('cAchieved').textContent=fmt(achieved);
+  const pct=target>0?Math.round(achieved/target*100):0;
+  document.getElementById('cAchievedSub').textContent=`${pct}% of combined target`;
+  document.getElementById('cAttention').textContent=attention;
+  document.getElementById('cCadences').textContent='5';
+}
+function renderTable(){
+  let data=[...allAccounts];
+  if(currentSearch)data=data.filter(a=>a.name.toLowerCase().includes(currentSearch.toLowerCase())||a.industry.toLowerCase().includes(currentSearch.toLowerCase()));
+  if(currentFilter==='tier1')data=data.filter(a=>a.tier===1);
+  else if(currentFilter==='tier2')data=data.filter(a=>a.tier===2);
+  else if(currentFilter==='attention')data=data.filter(a=>a.attention.level!=='none');
+  else if(currentFilter==='noplan')data=data.filter(a=>a.planStatus==='none');
+  const AV=['#0e1e35','#162844','#1c3455','#0d9488','#2463eb','#15803d','#b45309','#0e1e35'];
+  document.getElementById('tblBody').innerHTML=data.map((acc,i)=>{
+    const ragCls={green:'rag-g',amber:'rag-a',red:'rag-r'}[acc.rag];
+    const ragLbl={green:'Healthy',amber:'Monitor',red:'At Risk'}[acc.rag];
+    const planCls={active:'st-active',draft:'st-draft',closed:'st-none',none:'st-none'}[acc.planStatus];
+    const planLbl={active:'● Active',draft:'◐ Draft',closed:'◌ Closed',none:'○ No Plan'}[acc.planStatus];
+    const attCls={red:'att-r',amber:'att-a',none:'att-n'}[acc.attention.level];
+    const ppct=acc.target>0?Math.round(acc.achieved/acc.target*100):0;
+    const ini=acc.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    return `<tr onclick="openAccount('${acc.id}')">
+      <td><div class="acc-cell"><div class="acc-av" style="background:${AV[i%AV.length]}">${ini}</div><div><div class="acc-name">${acc.name}</div><div class="acc-ind">${acc.industry}</div></div></div></td>
+      <td><span class="tier t${acc.tier}">T${acc.tier}</span></td>
+      <td><span class="plan-st ${planCls}">${planLbl}</span></td>
+      <td><span class="rag ${ragCls}">${ragLbl}</span></td>
+      <td><span class="att ${attCls}" title="${acc.attention.text}">${acc.attention.text}</span></td>
+      <td><div class="prog-wrap"><div class="prog-bg"><div class="prog-fill${ppct>=100?' done':''}" style="width:${Math.min(ppct,100)}%"></div></div><span class="prog-pct">${ppct}%</span></div></td>
+      <td style="font-size:12px;font-weight:600;font-family:var(--mono);color:var(--text-mid)">${fmt(acc.target)}</td>
+      <td style="font-size:11px;color:var(--text-muted)">${acc.lastUpdated}</td>
+      <td onclick="event.stopPropagation()"><div class="row-acts">
+        ${acc.planStatus!=='none'
+          ?`<button class="row-btn pri" onclick="openAccount('${acc.id}')">View Plan</button>`
+          :`<button class="row-btn pri" onclick="openCreatePanel('${acc.id}')">Create Plan</button>`}
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+function filterAccounts(v){currentSearch=v;renderTable()}
+function setFilter(f,el){currentFilter=f;document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');renderTable()}
+function sortAccounts(v){
+  const ord={green:0,amber:1,red:2};
+  if(v==='rag')allAccounts.sort((a,b)=>(ord[a.rag]||1)-(ord[b.rag]||1));
+  else if(v==='target')allAccounts.sort((a,b)=>(b.target||0)-(a.target||0));
+  else if(v==='name')allAccounts.sort((a,b)=>a.name.localeCompare(b.name));
+  renderTable();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL OPEN / CLOSE
+// ═══════════════════════════════════════════════════════════════
+async function openAccount(id){
+  const acc=allAccounts.find(a=>a.id===id)||allAccounts[0];
+  chatHistory=[];
+  currentAccount=acc;currentAccountId=acc.accountId;currentPlanMode='existing';
+  document.getElementById('pAccName').textContent=acc.name;
+  document.getElementById('pAccMeta').textContent=`Tier ${acc.tier} · ${acc.industry}`;
+  document.getElementById('overlay').classList.add('on');
+  document.getElementById('panel').classList.add('on');
+  currentPlanId=acc.rawPlan?.wrl_accountplanid||null;
+  let plan=MOCK_PLAN;
+  if(API.isD365()){
+    try{
+      let payload=acc.planPayload;
+      if(!payload&&currentPlanId){const r=await API.getRecord('wrl_accountplan',currentPlanId,'?$select=wrl_planpayload');if(r?.wrl_planpayload){payload=JSON.parse(r.wrl_planpayload);acc.planPayload=payload;}}
+      if(payload)plan=payload;
+    }catch(e){console.error('[AccordIn] openAccount:',e);}
+  }
+  renderPlan(plan,acc);
+}
+function openCreatePanel(id){
+  const acc=allAccounts.find(a=>a.id===id)||allAccounts[0];
+  chatHistory=[];
+  currentAccount=acc;currentAccountId=acc?.accountId||null;currentPlanId=null;currentPlanMode='new';
+  document.getElementById('pAccName').textContent=acc?.name||'New Account Plan';
+  document.getElementById('pAccMeta').textContent=`Tier ${acc?.tier||1} · ${acc?.industry||'—'}`;
+  document.getElementById('overlay').classList.add('on');
+  document.getElementById('panel').classList.add('on');
+  document.querySelectorAll('.p-tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.p-tab')[1].classList.add('on');
+  renderCreateMode();
+}
+function closePanel(){
+  document.getElementById('overlay').classList.remove('on');
+  document.getElementById('panel').classList.remove('on');
+  closeAllPopovers();
+  chatHistory=[]; // reset for next account
+}
+function switchTab(tab,el){
+  document.querySelectorAll('.p-tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');
+  if(tab==='view'){if(currentPlan)renderPlan(currentPlan,currentAccount);else openAccount(currentAccount?.id);}
+  else if(tab==='create')renderCreateMode();
+  else if(tab==='history')renderHistory();
+}
+function switchMidTab(tab,el){
+  document.querySelectorAll('.p-mid-tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');
+  if(tab==='plan')renderPlanTab(currentPlan);
+  else if(tab==='contacts')renderContactsTab(currentPlan);
+}
+async function approvePlan(){
+  if(API.isD365()&&currentPlanId){
+    const request={
+      PlanId:currentPlanId,
+      ActionType:'approve',
+      getMetadata:function(){return{boundParameter:null,parameterTypes:{PlanId:{typeName:'Edm.String',structuralProperty:1},ActionType:{typeName:'Edm.String',structuralProperty:1}},operationType:0,operationName:'accordin_RefinePlan'};}
+    };
+    try{
+      const response=await API.xrm().WebApi.online.execute(request);
+      const result=await response.json();
+      if(currentAccount){
+        currentAccount.planStatus='active';
+        currentAccount.rawPlan=currentAccount.rawPlan||{};
+        currentAccount.rawPlan.wrl_planstatus=1;
+      }
+      renderSummary();renderTable();
+      addMsg('ai',result.ResponseMessage||'Plan approved. Status updated to Active in Dataverse. Cadences and actions are now live.');
+    }catch(e){
+      console.error('[AccordIn] approvePlan:',e);
+      addMsg('ai','Plan approval failed. Please try again.');
+    }
+    return;
+  }
+  addMsg('ai','Plan approved. Status updated to Active in Dataverse. Cadences and actions are now live.');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER PLAN
+// ═══════════════════════════════════════════════════════════════
+const CHAN_ICON={'online-meeting':'🖥','in-person':'🤝',phone:'📞',email:'✉',other:'📋'};
+const ROLE_CFG={'primary-relationship':{lbl:'Primary',cls:'rb-primary'},'opportunity-owner':{lbl:'Opp. Owner',cls:'rb-owner'},'approval-risk':{lbl:'⚠ Risk',cls:'rb-risk'},'low-priority':{lbl:'Low Priority',cls:'rb-low'},'no-data':{lbl:'No Data',cls:'rb-low'}};
+const ENG_CLS={High:'eb-h',Medium:'eb-m',Low:'eb-l',Unknown:'eb-u'};
+
+function renderPlan(plan,acc,options={}){
+  const preserveChat=!!options.preserveChat;
+  currentPlan=plan;
+  const ini=n=>n?n.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase():'?';
+  const isExisting=(currentPlanMode==='existing');
+
+  // Show left panel
+  document.getElementById('pLeft').style.display='flex';
+
+  // Mode labels — TODO: existing plan mode - replace with live health data in v4
+  document.getElementById('assessLbl').textContent=isExisting?'Account Health':'Strategic Assessment';
+  document.getElementById('sigsLbl').textContent=isExisting?'Recent Signals':'Positive Signals';
+
+  // Snapshot
+  const rs=acc?.wrl_relationshipscore||acc?.relationshipScore||81;
+  document.getElementById('accSnapshot').innerHTML=`
+    <div class="stat-row"><span class="stat-k">Annual Revenue</span><span class="stat-v blue">${fmt(acc?.target||6200000)}</span></div>
+    <div class="stat-row"><span class="stat-k">Relationship Score</span><span class="stat-v">${rs} / 100</span></div>
+    <div class="rel-bar"><div class="rel-fill" style="width:${rs}%"></div></div>
+    <div class="stat-row"><span class="stat-k">Pipeline Total</span><span class="stat-v blue">${fmt(plan.revenuePicture?.pipelineValue||0)}</span></div>
+    <div class="stat-row"><span class="stat-k">Weighted Target</span><span class="stat-v blue">${fmt(plan.revenueTarget||0)}</span></div>`;
+
+  // Assessment
+  const openEl=document.getElementById('openText');
+  openEl.textContent=plan.openingStatement||'—';openEl.classList.remove('expanded');
+  document.getElementById('assessToggle').textContent='more';
+
+  // Forecast
+  document.getElementById('revLo').textContent=fmt(plan.revenuePicture?.totalLow);
+  document.getElementById('revMd').textContent=fmt(plan.revenuePicture?.totalMid);
+  document.getElementById('revHi').textContent=fmt(plan.revenuePicture?.totalHigh);
+  document.getElementById('fcText').textContent=plan.forecastNarrative||'—';
+
+  // Signals — assign IDs for scroll-to
+  document.getElementById('posSigs').innerHTML=(plan.positiveSignals||[]).map((s,i)=>`<div class="sig-item" id="signal-${i}"><div class="sig-dot"></div><div class="sig-text">${s}</div></div>`).join('');
+
+  // Watchouts — assign IDs for scroll-to
+  document.getElementById('watchouts').innerHTML=(plan.watchouts||[]).map((w,i)=>`<div class="wo-item" id="watchout-${i}">${w}</div>`).join('');
+
+  // Data limitations
+  document.getElementById('dataLims').innerHTML=(plan.dataLimitations||[]).map(l=>`<div class="lim-item"><span style="flex-shrink:0;margin-top:1px">ℹ</span>${l}</div>`).join('');
+  document.getElementById('dataLims').classList.add('lim-collapsed');
+
+  // Contact strip
+  renderContactStrip(plan.contactEngagement||[]);
+
+  // Show tabs, default to Plan
+  document.getElementById('pMidTabs').style.display='flex';
+  document.querySelectorAll('.p-mid-tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.p-mid-tab')[0].classList.add('on');
+  renderPlanTab(plan);
+
+  // Open copilot with proactive message
+  copilotOpen=true;applyCollapseState();
+  if(preserveChat&&chatHistory.length){
+    const status=document.getElementById('chatStatus');
+    const sub=document.getElementById('chatSub');
+    if(status)status.classList.remove('pulse');
+    if(sub)sub.textContent='Refine this plan';
+    renderChatHistory();
+  }else{
+    setCopilotState('ready',acc?.name,plan);
+  }
+  generateQuickPrompts(plan);
+}
+
+// ── CONTACT STRIP ────────────────────────────────────────────
+function renderContactStrip(contacts){
+  const wrap=document.getElementById('contactStripWrap');
+  const strip=document.getElementById('contactStrip');
+  if(!contacts.length){wrap.style.display='none';return;}
+  wrap.style.display='block'; // inside p-mid-wrap column flex
+  const primary=contacts.find(c=>c.planRole==='primary-relationship');
+  const risk=contacts.find(c=>c.planRole==='approval-risk');
+  const recent=[...contacts].sort((a,b)=>(b.lastActivity||'').localeCompare(a.lastActivity||'')).find(c=>c.planRole!=='primary-relationship'&&c.planRole!=='approval-risk');
+  const featured=[];
+  if(primary)featured.push({...primary,stripRole:'primary'});
+  if(risk)featured.push({...risk,stripRole:'risk'});
+  if(recent&&!featured.find(f=>f.name===recent.name))featured.push({...recent,stripRole:'active'});
+  const remaining=contacts.length-featured.length;
+  const avColors=['#0e1e35','#b91c1c','#2463eb','#0d9488','#15803d'];
+  const roleLbl={primary:'PRIMARY',risk:'RISK',active:'ACTIVE'};
+  const roleCls={primary:'cs-r-primary',risk:'cs-r-risk',active:'cs-r-active'};
+  const itemCls={primary:'cs-primary',risk:'cs-risk',active:''};
+  const ini=n=>n?n.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase():'?';
+  strip.innerHTML=featured.map((c,i)=>{
+    const hasGap=c.planRole==='approval-risk'&&!c.hasCadence;
+    return `<div class="cs-item ${itemCls[c.stripRole]}" onclick="showContactsTab()" title="${c.name} — ${c.title}">
+      <div class="cs-av" style="background:${avColors[i%avColors.length]}">${ini(c.name)}${hasGap?'<div class="cs-warn-dot"></div>':''}</div>
+      <div class="cs-info">
+        <div class="cs-name">${c.name}</div>
+        <div class="cs-jobtitle">${c.title}</div>
+        <span class="cs-role ${roleCls[c.stripRole]}">${roleLbl[c.stripRole]}</span>
+      </div>
+    </div>`;
+  }).join('')+(remaining>0?`<div class="cs-more" onclick="showContactsTab()">+${remaining} contacts</div>`:'');
+}
+function showContactsTab(){
+  document.querySelectorAll('.p-mid-tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.p-mid-tab')[1].classList.add('on');
+  renderContactsTab(currentPlan);
+}
+
+// ── PLAN TAB ─────────────────────────────────────────────────
+function renderPlanTab(plan){
+  const atRisk=(plan.contactEngagement||[]).filter(c=>c.planRole==='approval-risk'&&!c.hasCadence);
+  document.getElementById('pMid').innerHTML=`
+    ${atRisk.length?`<div class="m-sec"><div class="gap-warn"><span>⚠</span><span><strong>Coverage gap:</strong> ${atRisk.map(c=>c.name).join(', ')} flagged as approval risk with no cadence. Ask the copilot to add a re-engagement cadence.</span></div></div>`:''}
+    <div class="m-sec">
+      <div class="m-hdr"><span class="m-title">Recommendations</span><span class="m-count">${(plan.recommendations||[]).length}</span></div>
+      ${(plan.recommendations||[]).map((r,i)=>{
+        const cc={high:'cb-h',medium:'cb-m',low:'cb-l'}[r.confidence]||'cb-m';
+        return `<div class="rec" id="rec-${i}">
+          <button class="rat-btn" onclick="togglePopover(event,'pop-rec-${i}')" title="Why this recommendation?">i</button>
+          <div class="rat-pop" id="pop-rec-${i}">
+            <div class="rat-pop-title">Why this recommendation</div>
+            <div class="rat-pop-text">${r.rationale}</div>
+            ${r.insightRef?`<div class="rat-pop-link" onclick="scrollToInsight('${r.insightRef}','pop-rec-${i}')">See linked insight</div>`:''}
+          </div>
+          <div class="rec-hdr">
+            <div class="rec-num">${i+1}</div>
+            <div style="flex:1"><div class="rec-prod">${r.productName||r.type}</div><div class="rec-type">${r.type}</div></div>
+            <span class="conf-b ${cc}">${r.confidence}</span>
+          </div>
+          <div class="rec-val">${fmt(r.estimatedValue)}</div>
+          <div class="rec-desc">${r.description}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="m-sec">
+      <div class="m-hdr"><span class="m-title">Engagement Cadences</span><span class="m-count">${(plan.cadences||[]).length}</span></div>
+      ${(plan.cadences||[]).map((c,i)=>`
+        <div class="cad" id="cad-${i}">
+          <button class="rat-btn" onclick="togglePopover(event,'pop-cad-${i}')" title="Why this cadence?">i</button>
+          <div class="rat-pop" id="pop-cad-${i}">
+            <div class="rat-pop-title">Why this cadence</div>
+            <div class="rat-pop-text">${c.rationale}</div>
+            ${c.insightRef?`<div class="rat-pop-link" onclick="scrollToInsight('${c.insightRef}','pop-cad-${i}')">See linked insight</div>`:''}
+          </div>
+          <div class="cad-icon">${CHAN_ICON[c.channel]||'📅'}</div>
+          <div style="flex:1">
+            <div class="cad-name">${c.name}</div>
+            ${(c.contactName&&c.contactName!==c.contactTitle)?`<div class="cad-contact">${c.contactName}</div><div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">${c.contactTitle}</div>`:`<div class="cad-contact">${c.contactName||c.contactTitle}</div>`}
+            <div class="cad-chips">
+              <span class="cad-chip">${c.contactTitle}</span>
+              <span class="cad-chip">${c.frequency}</span>
+              <span class="cad-chip">${c.channel}</span>
+              ${c.locationAware?'<span class="cad-chip remote">Remote</span>':''}
+            </div>
+            <div class="cad-purp">${c.purpose}</div>
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="m-sec">
+      <div class="m-hdr"><span class="m-title">One-off Actions</span><span class="m-count">${(plan.oneOffActions||[]).length}</span></div>
+      ${(plan.oneOffActions||[]).map((a,i)=>{
+        const pc={high:'pb-h',medium:'pb-m',low:'pb-l'}[a.priority]||'pb-m';
+        return `<div class="act" id="act-${i}">
+          <button class="rat-btn" onclick="togglePopover(event,'pop-act-${i}')" title="Why this action?">i</button>
+          <div class="rat-pop" id="pop-act-${i}">
+            <div class="rat-pop-title">Why this action</div>
+            <div class="rat-pop-text">${a.rationale}</div>
+            ${a.insightRef?`<div class="rat-pop-link" onclick="scrollToInsight('${a.insightRef}','pop-act-${i}')">See linked insight</div>`:''}
+          </div>
+          <span class="prio-b ${pc}">${a.priority}</span>
+          <div><div class="act-desc">${a.description}</div><div class="act-timing">${CHAN_ICON[a.channel]||''} ${a.channel} · ${a.suggestedTiming}</div></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ── CONTACTS TAB ─────────────────────────────────────────────
+function renderContactsTab(plan){
+  const contacts=plan?.contactEngagement||[];
+  const atRisk=contacts.filter(c=>c.planRole==='approval-risk'&&!c.hasCadence);
+  const ini=n=>n?n.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase():'?';
+  document.getElementById('pMid').innerHTML=`
+    <div class="m-sec">
+      <div class="m-hdr"><span class="m-title">Contact Engagement</span><span class="m-count">${contacts.length} contacts</span></div>
+      ${atRisk.length?`<div class="gap-warn"><span>⚠</span><span><strong>Coverage gap:</strong> ${atRisk.map(c=>c.name).join(', ')} flagged as approval risk with no cadence.</span></div>`:''}
+      ${contacts.map(c=>{
+        const rc=ROLE_CFG[c.planRole]||ROLE_CFG['low-priority'];
+        const rowCls=c.planRole==='primary-relationship'?'c-primary':c.planRole==='approval-risk'?'c-risk':'';
+        return `<div class="c-row ${rowCls}">
+          <div class="c-av">${ini(c.name)}</div>
+          <div class="c-info">
+            <div class="c-name-row"><span class="c-name">${c.name}</span><span class="role-b ${rc.cls}">${rc.lbl}</span>${c.hasCadence?'<span class="cad-tag">In Plan</span>':''}</div>
+            <div class="c-title-txt">${c.title}</div>
+            <div class="c-meta"><span class="eng-b ${ENG_CLS[c.engagementLevel]||'eb-u'}">${c.engagementLevel}</span><span class="c-act">Last: ${c.lastActivity||'No activity'}</span></div>
+            <div class="c-note">${c.strategicNote}</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RATIONALE POPOVERS + SCROLL-TO-INSIGHT
+// ═══════════════════════════════════════════════════════════════
+function togglePopover(e, popId){
+  e.stopPropagation();
+  const pop=document.getElementById(popId);
+  const isOpen=pop.classList.contains('open');
+  closeAllPopovers();
+  if(!isOpen)pop.classList.add('open');
+}
+function closeAllPopovers(){
+  document.querySelectorAll('.rat-pop.open').forEach(p=>p.classList.remove('open'));
+}
+
+// insightRef format: 'watchout:N', 'signal:N', 'forecast', 'snapshot'
+function scrollToInsight(ref, popId){
+  closeAllPopovers();
+
+  // Find the target element
+  let targetId = null;
+  let sectionId = null;
+
+  if(ref.startsWith('watchout:')){
+    const idx = ref.split(':')[1];
+    targetId = `watchout-${idx}`;
+    sectionId = 'secWatchouts';
+  } else if(ref.startsWith('signal:')){
+    const idx = ref.split(':')[1];
+    targetId = `signal-${idx}`;
+    sectionId = 'secSignals';
+  } else if(ref==='forecast'){
+    sectionId = 'secForecast';
+  } else if(ref==='snapshot'){
+    sectionId = 'secSnapshot';
+  }
+
+  const leftPanel = document.getElementById('pLeft');
+
+  // On mobile, open the left panel if it is not visible
+  if(window.innerWidth<=900){
+    leftPanel.classList.add('mobile-open');
+  }
+
+  // Scroll and highlight
+  const target = targetId ? document.getElementById(targetId) : document.getElementById(sectionId);
+  if(target){
+    // Scroll the left panel to the element
+    setTimeout(()=>{
+      target.scrollIntoView({behavior:'smooth',block:'center'});
+      // Apply highlight animation
+      target.classList.remove('insight-highlight');
+      void target.offsetWidth; // force reflow to restart animation
+      target.classList.add('insight-highlight');
+      setTimeout(()=>target.classList.remove('insight-highlight'), 2000);
+    }, window.innerWidth<=900 ? 300 : 50);
+  }
+}
+
+// Close popovers when clicking elsewhere
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('.rat-btn')&&!e.target.closest('.rat-pop')){
+    closeAllPopovers();
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// COPILOT STATE + PROACTIVE MESSAGE
+// ═══════════════════════════════════════════════════════════════
+function setCopilotState(state, accountName, plan){
+  const status=document.getElementById('chatStatus');
+  const sub=document.getElementById('chatSub');
+
+  if(state==='idle'){
+    chatHistory=[];
+    chatHistory.push({
+      role:'ai',
+      text:'Select a planning intent and click Generate Plan. I will analyse the account data and walk you through the plan as it is generated.',
+      time:'Just now'
+    });
+    if(status)status.classList.remove('pulse');
+    if(sub)sub.textContent='Ready to generate';
+    document.getElementById('qPrompts').innerHTML='';
+  } else if(state==='generating'){
+    chatHistory=[];
+    chatHistory.push({
+      role:'ai',
+      text:'Analysing account data from Dataverse — reading opportunities, contacts, signals and activities. This takes 15–30 seconds.',
+      time:'Just now'
+    });
+    if(status)status.classList.add('pulse');
+    if(sub)sub.textContent='Generating plan...';
+    document.getElementById('qPrompts').innerHTML='';
+  } else if(state==='ready'&&plan){
+    // Proactive message — connects the top insight to the top action
+    const topRec = plan.recommendations?.[0];
+    const topWatchout = plan.watchouts?.[0];
+    const approvalRisk = plan.contactEngagement?.find(c=>c.planRole==='approval-risk');
+
+    if(chatHistory.length===0){
+      let msg = `Plan loaded for ${accountName||'this account'}.`;
+
+      if(topRec){
+        msg += ` The primary revenue driver is <strong>${(topRec.productName||'top recommendation').split('–')[0].split('—')[0].trim()}</strong> at ${fmt(topRec.estimatedValue)} — ${topRec.confidence} confidence.`;
+      }
+      if(approvalRisk&&!approvalRisk.hasCadence){
+        msg += ` <strong>${approvalRisk.name.split(' ')[0]}</strong> (${approvalRisk.title.split('–')[0].trim()}) is disengaged and controls budget approvals — this is your most urgent risk. Tap the <em>i</em> on any action to see why it was included.`;
+      } else if(topWatchout){
+        const short=topWatchout.length>120?topWatchout.substring(0,120)+'…':topWatchout;
+        msg += ` Key watchout: ${short}`;
+      }
+      chatHistory.push({role:'ai',text:msg,time:'Just now'});
+    }
+    if(status)status.classList.remove('pulse');
+    if(sub)sub.textContent='Refine this plan';
+  }
+  renderChatHistory();
+}
+
+function generateQuickPrompts(plan){
+  const rec0=plan.recommendations?.[0];
+  const riskContact=plan.contactEngagement?.find(c=>c.planRole==='approval-risk');
+  const prompts=[
+    rec0?`Why ${(rec0.productName||'top rec').split('–')[0].split('—')[0].trim().substring(0,26)} first?`:'Why top recommendation?',
+    riskContact?`${riskContact.name.split(' ')[0]} risk?`:'Approval risk?',
+    'Who to contact first?',
+    'What needs this week?'
+  ];
+  document.getElementById('qPrompts').innerHTML=prompts.map(p=>`<button class="q-btn" onclick="qprompt(this)">${p}</button>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CREATE MODE
+// ═══════════════════════════════════════════════════════════════
+function renderCreateMode(){
+  document.getElementById('pLeft').style.display='none';
+  document.getElementById('contactStripWrap').style.display='none';
+  document.getElementById('pMidTabs').style.display='none';
+  document.getElementById('pMid').innerHTML=`
+    <div class="create-mode">
+      <div class="create-icon">◈</div>
+      <div class="create-title">Create Account Plan</div>
+      <div class="create-sub">Select a planning intent. The copilot will analyse your account data from Dataverse and generate a grounded strategic plan.</div>
+      <div class="intent-opts">
+        <div class="intent-opt on" onclick="selIntent(this)"><div class="intent-emoji">🔀</div><div><div class="intent-lbl">Cross-sell</div><div class="intent-desc">Expand into new products or services</div></div></div>
+        <div class="intent-opt" onclick="selIntent(this)"><div class="intent-emoji">⬆</div><div><div class="intent-lbl">Upsell</div><div class="intent-desc">Upgrade tier or increase usage</div></div></div>
+        <div class="intent-opt" onclick="selIntent(this)"><div class="intent-emoji">🔄</div><div><div class="intent-lbl">Retention</div><div class="intent-desc">Secure renewal and prevent churn</div></div></div>
+        <div class="intent-opt" onclick="selIntent(this)"><div class="intent-emoji">🤝</div><div><div class="intent-lbl">Relationship</div><div class="intent-desc">Strengthen executive engagement</div></div></div>
+      </div>
+      <button class="btn btn-primary" style="font-size:13px;padding:10px 28px" onclick="generatePlan()">Generate Plan →</button>
+    </div>`;
+  setCopilotState('idle');
+}
+function selIntent(el){document.querySelectorAll('.intent-opt').forEach(o=>o.classList.remove('on'));el.classList.add('on')}
+
+async function generatePlan(){
+  setCopilotState('generating');
+  document.getElementById('pMid').innerHTML=`
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;padding:40px;">
+      <div class="spin"></div>
+      <div style="font-size:13px;color:var(--text-muted)">Collecting account data from Dataverse...</div>
+      <div style="font-size:11px;color:var(--slate-lt);text-align:center;max-width:260px">Reading opportunities, contacts, activities and signals. Calling the planning copilot.</div>
+    </div>`;
+  if(!API.isD365()){
+    setTimeout(()=>{
+      currentPlanMode='new';
+      document.getElementById('pLeft').style.display='flex';
+      document.querySelectorAll('.p-tab').forEach(t=>t.classList.remove('on'));
+      document.querySelectorAll('.p-tab')[0].classList.add('on');
+      renderPlan(MOCK_PLAN,currentAccount||allAccounts[0]);
+    },2400);return;
+  }
+  try{
+    if(!currentAccountId)throw new Error('No account selected.');
+    const intentLabel=document.querySelector('.intent-opt.on .intent-lbl')?.textContent||'Cross-sell';
+    const intentDesc=document.querySelector('.intent-opt.on .intent-desc')?.textContent||'';
+    const request={
+      AccountId:currentAccountId,PlanIntent:intentDesc||intentLabel,PlanType:intentLabel.toLowerCase(),
+      getMetadata:function(){return{boundParameter:null,parameterTypes:{AccountId:{typeName:'Edm.String',structuralProperty:1},PlanIntent:{typeName:'Edm.String',structuralProperty:1},PlanType:{typeName:'Edm.String',structuralProperty:1}},operationType:0,operationName:'accordin_GeneratePlan'};}
+    };
+    const response=await API.xrm().WebApi.online.execute(request);
+    const result=await response.json();
+    const planId=result.PlanId;
+    if(!planId)throw new Error('Plugin did not return a PlanId.');
+    const planRecord=await API.getRecord('wrl_accountplan',planId,'?$select=wrl_planpayload');
+    const plan=planRecord?.wrl_planpayload?JSON.parse(planRecord.wrl_planpayload):null;
+    if(!plan)throw new Error('Plan saved but payload could not be loaded.');
+    currentPlanId=planId;currentPlanMode='new';
+    if(currentAccount){
+      currentAccount.planPayload=plan;
+      currentAccount.rawPlan=currentAccount.rawPlan||{};
+      currentAccount.rawPlan.wrl_accountplanid=planId;
+    }
+    document.getElementById('pLeft').style.display='flex';
+    document.querySelectorAll('.p-tab').forEach(t=>t.classList.remove('on'));
+    document.querySelectorAll('.p-tab')[0].classList.add('on');
+    renderPlan(plan,currentAccount);
+  }catch(e){
+    console.error('[AccordIn] generatePlan:',e);
+    renderCreateMode();
+    addMsg('ai',`<strong>Plan generation failed.</strong> ${e.message||'Check the plugin trace log.'}`);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════════════════
+function renderHistory(){
+  document.getElementById('pLeft').style.display='none';
+  document.getElementById('contactStripWrap').style.display='none';
+  document.getElementById('pMidTabs').style.display='none';
+  document.getElementById('pMid').innerHTML=`
+    <div style="padding:20px">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px">Plan History</div>
+      ${[{v:'v3 — Current',d:'Today, 14:32',i:'Cross-sell',t:'£1.76M'},{v:'v2',d:'2026-03-15, 09:14',i:'Cross-sell',t:'£1.62M'},{v:'v1',d:'2026-02-28, 16:45',i:'Cross-sell',t:'£1.40M'}].map(h=>`
+        <div style="border:1px solid var(--border);border-radius:var(--r);padding:13px;margin-bottom:7px;background:white;display:flex;gap:12px;align-items:center">
+          <div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--text)">${h.v}</div><div style="font-size:11px;color:var(--text-muted)">${h.d} · ${h.i} · Wahaj Rashid</div></div>
+          <div style="font-size:14px;font-weight:700;font-family:var(--mono);color:var(--blue)">${h.t}</div>
+          <button class="row-btn" onclick="if(currentAccount)openAccount(currentAccount.id)">View</button>
+        </div>`).join('')}
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHAT
+// ═══════════════════════════════════════════════════════════════
+const RESPONSES={
+  'jebel ali':'Jebel Ali Port Premium Berthing is in Negotiation stage — the highest pipeline stage in this account. At 85% confidence it contributes £612,000 to the revenue floor. Commercial terms were reviewed on 2026-02-13. Tap the i icon on that recommendation to see the linked insight.',
+  'sophia':'Sophia Martinez has not engaged since 2025-11-22. With £3.84M in open pipeline, her budget approval is required for all seven opportunities. She is flagged as approval-risk with no cadence. Tap the i icon on the Finance Controller Re-engagement cadence to see the linked watchout.',
+  'risk':'Sophia Martinez (Finance Controller) has not engaged since 2025-11-22. Her approval is required for all seven pipeline opportunities. The plan includes a re-engagement cadence and a one-off action to address this.',
+  'contact first':'Laura Chen is your primary relationship contact — Global Director of Logistics, High engagement, last active 2026-02-18. She is the anchor for the strategic conversation on this account.',
+  'this week':'Two high-priority actions: (1) Send Sophia Martinez the financial summary covering all seven opportunities — tap the i on that action to see why. (2) Submit the Digital Supply Chain bundle proposal to Daniel Brooks following the 2026-02-08 pricing request.',
+  'whitespace':'Whitespace is zero for this account. All identified expansion signals are already in the active pipeline. Whitespace would only apply to products or regions with signals but no open opportunities.',
+  'default':'Noted. In the connected system, I would update the plan and re-render it here. Tap the i icon on any recommendation, cadence, or action to see the reasoning and its linked insight on the left panel.'
+};
+function addMsg(role,text){
+  const t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  chatHistory.push({role,text,time:t});
+  renderChatHistory();
+  if(API.isD365()&&currentPlanId)API.saveMessage(currentPlanId,text,role,msgCount++);
+}
+function setChatPending(text){
+  clearChatPending(false);
+  chatHistory.push({role:'ai',text:text||'Processing...',time:'Working...',pending:true});
+  renderChatHistory();
+}
+function clearChatPending(shouldRender=true){
+  const next=chatHistory.filter(m=>!m.pending);
+  const changed=next.length!==chatHistory.length;
+  chatHistory=next;
+  if(changed&&shouldRender)renderChatHistory();
+}
+function renderChatHistory(){
+  const c=document.getElementById('chatMsgs');
+  if(!c)return;
+  c.innerHTML=chatHistory.map(m=>`
+    <div class="msg ${m.role}">
+      <div class="msg-bubble">${m.text}</div>
+      <div class="msg-time">${m.time}</div>
+    </div>`).join('');
+  c.scrollTop=c.scrollHeight;
+}
+function qprompt(btn){
+  const txt=btn.textContent;addMsg('user',txt);
+  setTimeout(()=>{const k=txt.toLowerCase();const m=Object.keys(RESPONSES).find(r=>r!=='default'&&k.includes(r));addMsg('ai',m?RESPONSES[m]:RESPONSES['default']);},700);
+}
+async function sendChat(){
+  const ta=document.getElementById('chatTa');
+  const txt=ta.value.trim();
+  if(!txt||chatBusy)return;
+  const sub=document.getElementById('chatSub');
+  const status=document.getElementById('chatStatus');
+  chatBusy=true;
+  addMsg('user',txt);ta.value='';ta.style.height='auto';
+  if(API.isD365()&&currentPlanId){
+    const request={PlanId:currentPlanId,UserMessage:txt,getMetadata:function(){return{boundParameter:null,parameterTypes:{PlanId:{typeName:'Edm.String',structuralProperty:1},UserMessage:{typeName:'Edm.String',structuralProperty:1}},operationType:0,operationName:'accordin_RefinePlan'};}};
+    try{
+      if(status)status.classList.add('pulse');
+      if(sub)sub.textContent='Applying refinement...';
+      setChatPending('Processing your refinement...');
+      const response=await API.xrm().WebApi.online.execute(request);
+      const result=await response.json();
+      clearChatPending();
+      addMsg('ai',result.ResponseMessage||'Done.');
+      if(result.IsPlanUpdate){
+        const updateTime=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+        chatHistory.push({
+          role:'ai',
+          text:'✓ Plan updated in Dataverse. Reloading the latest version...',
+          time:updateTime
+        });
+        renderChatHistory();
+        await new Promise(resolve=>setTimeout(resolve,800));
+        const record=await API.getRecord('wrl_accountplan',currentPlanId,'?$select=wrl_planpayload');
+        if(record?.wrl_planpayload){
+          const plan=JSON.parse(record.wrl_planpayload);
+          const acc=currentAccount||allAccounts.find(a=>a.id===currentPlanId)||allAccounts.find(a=>a.accountId===currentAccountId)||allAccounts[0];
+          if(acc)acc.planPayload=plan;
+          renderPlan(plan,acc,{preserveChat:true});
+        }
+      }
+    }catch(e){
+      console.error('[AccordIn] sendChat:',e);
+      clearChatPending();
+      addMsg('ai','An error occurred. Please try again.');
+    }finally{
+      chatBusy=false;
+      if(status)status.classList.remove('pulse');
+      if(sub)sub.textContent='Refine this plan';
+    }
+  }else{
+    setChatPending('Processing your request...');
+    setTimeout(()=>{
+      clearChatPending();
+      const k=txt.toLowerCase();
+      const m=Object.keys(RESPONSES).find(r=>r!=='default'&&k.includes(r));
+      addMsg('ai',m?RESPONSES[m]:RESPONSES['default']);
+      chatBusy=false;
+    },800);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UI TOGGLES
+// ═══════════════════════════════════════════════════════════════
+function toggleCopilot(){
+  copilotOpen=!copilotOpen;
+  document.getElementById('copilotPanel').classList.toggle('user-open',copilotOpen);
+  applyCollapseState();
+}
+function applyCollapseState(){
+  const panel=document.getElementById('copilotPanel');
+  const btn=document.getElementById('collapseBtn');
+  const isOpen=copilotOpen||(window.innerWidth>1200&&!panel.classList.contains('collapsed'));
+  if(copilotOpen){
+    panel.classList.remove('collapsed');panel.classList.add('user-open');
+    if(btn)btn.textContent='›'; // pointing right = will collapse to right
+  }else{
+    panel.classList.add('collapsed');panel.classList.remove('user-open');
+    if(btn)btn.textContent='‹'; // pointing left = will expand from right
+  }
+}
+function toggleSituation(){document.getElementById('pLeft').classList.toggle('mobile-open')}
+function toggleAssess(){
+  const el=document.getElementById('openText');const tog=document.getElementById('assessToggle');
+  const exp=el.classList.toggle('expanded');tog.textContent=exp?'less':'more';
+}
+function toggleLimits(btn){
+  const el=document.getElementById('dataLims');
+  const hidden=el.classList.toggle('lim-collapsed');
+  btn.textContent=hidden?'show':'hide';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════
+function fmt(n){
+  if(!n&&n!==0)return'—';if(n===0)return'£0';
+  if(n>=1000000)return'£'+(n/1000000).toFixed(1)+'M';
+  if(n>=1000)return'£'+Math.round(n/1000)+'K';
+  return'£'+n.toLocaleString();
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const ta=document.getElementById('chatTa');
+  ta?.addEventListener('input',()=>{ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,90)+'px';});
+  init();
+});
+</script>
+</body>
+</html>

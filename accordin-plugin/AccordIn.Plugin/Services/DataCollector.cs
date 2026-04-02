@@ -172,6 +172,7 @@ namespace AccordIn.Plugin.Services
 
             return new Contact
             {
+                ContactId       = e.Id,
                 Name            = e.GetAttributeValue<string>("fullname"),
                 Title           = e.GetAttributeValue<string>("jobtitle"),
                 City            = e.GetAttributeValue<string>("address1_city"),

@@ -121,6 +121,59 @@ namespace AccordIn.Plugin.Services
             return PostChatCompletions(messages, maxTokens);
         }
 
+        /// <summary>
+        /// Sends the full plan JSON to the model for complex multi-step refinements.
+        /// Used only as a fallback when intent classification returns complex_refine.
+        /// </summary>
+        public string RefineWithFullContext(string planJson, string userMessage, string systemPrompt)
+        {
+            var requestBody = new
+            {
+                model = _deploymentName,
+                max_tokens = 4000,
+                temperature = 0,
+                messages = new[]
+                {
+                    new { role = "system", content = systemPrompt },
+                    new { role = "user", content = $"Current plan:\n{planJson}\n\nInstruction: {userMessage}" }
+                }
+            };
+
+            var json = System.Text.Json.JsonSerializer.Serialize(requestBody);
+
+            using (var client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Add("api-key", _apiKey);
+                var url = $"{_endpoint}/openai/deployments/{Uri.EscapeDataString(_deploymentName)}/chat/completions?api-version={Uri.EscapeDataString(_apiVersion)}";
+                var response = client.PostAsync(
+                    url,
+                    new StringContent(json, Encoding.UTF8, "application/json")).GetAwaiter().GetResult();
+                var responseJson = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+
+                if (!response.IsSuccessStatusCode)
+                    throw new InvalidOperationException($"[AccordIn] RefineWithFullContext error: {responseJson}");
+
+                using (var doc = System.Text.Json.JsonDocument.Parse(responseJson))
+                {
+                    var content = doc.RootElement
+                        .GetProperty("choices")[0]
+                        .GetProperty("message")
+                        .GetProperty("content")
+                        .GetString();
+
+                    var cleaned = content?.Trim();
+                    if (cleaned != null && cleaned.StartsWith("```", StringComparison.Ordinal))
+                    {
+                        var start = cleaned.IndexOf('\n') + 1;
+                        var end = cleaned.LastIndexOf("```", StringComparison.Ordinal);
+                        if (end > start) cleaned = cleaned.Substring(start, end - start).Trim();
+                    }
+
+                    return cleaned;
+                }
+            }
+        }
+
         // -----------------------------------------------------------------------------------------
         // User message construction — port of the message-building block in run.js
         // -----------------------------------------------------------------------------------------
