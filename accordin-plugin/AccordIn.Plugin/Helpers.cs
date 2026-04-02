@@ -8,12 +8,12 @@ namespace AccordIn.Plugin
         {
             switch ((frequency ?? string.Empty).ToLowerInvariant().Trim())
             {
-                case "monthly":   return 0;
-                case "biweekly":  return 1;
-                case "quarterly": return 2;
-                case "weekly":    return 3;
-                case "ad-hoc":    return 4;
-                default:          return 0;
+                case "monthly":   return 1;
+                case "biweekly":  return 2;
+                case "quarterly": return 3;
+                case "weekly":    return 4;
+                case "ad-hoc":    return 5;
+                default:          return 1;
             }
         }
 
@@ -21,13 +21,13 @@ namespace AccordIn.Plugin
         {
             switch ((channel ?? string.Empty).ToLowerInvariant().Trim())
             {
-                case "phone":          return 0;
-                case "online-meeting": return 1;
+                case "online-meeting":
+                case "meeting":        return 0;
+                case "phone":          return 1;
                 case "in-person":      return 2;
-                case "email":          return 3;
-                case "other":
-                case "event":          return 4;
-                default:               return 1;
+                case "event":          return 3;
+                case "email":          return 4;
+                default:               return 0;
             }
         }
 
@@ -35,14 +35,14 @@ namespace AccordIn.Plugin
         {
             switch ((channel ?? string.Empty).ToLowerInvariant().Trim())
             {
-                case "call":
-                case "phone":          return 0;
                 case "meeting":
                 case "online-meeting": return 1;
-                case "in-person":      return 2;
-                case "email":          return 3;
-                case "other":
-                case "event":          return 4;
+                case "email":          return 2;
+                case "event":          return 3;
+                case "call":
+                case "phone":          return 4;
+                case "other":          return 5;
+                case "in-person":      return 1;
                 default:               return 1;
             }
         }
@@ -51,10 +51,10 @@ namespace AccordIn.Plugin
         {
             switch ((priority ?? string.Empty).ToLowerInvariant().Trim())
             {
-                case "high":   return 0;
-                case "medium": return 1;
-                case "low":    return 2;
-                default:       return 1;
+                case "high":   return 1;
+                case "medium": return 2;
+                case "low":    return 3;
+                default:       return 2;
             }
         }
 
@@ -62,10 +62,10 @@ namespace AccordIn.Plugin
         {
             switch ((confidence ?? string.Empty).ToLowerInvariant().Trim())
             {
-                case "high":   return 0;
-                case "medium": return 1;
-                case "low":    return 2;
-                default:       return 1;
+                case "high":   return 1;
+                case "medium": return 2;
+                case "low":    return 3;
+                default:       return 2;
             }
         }
 

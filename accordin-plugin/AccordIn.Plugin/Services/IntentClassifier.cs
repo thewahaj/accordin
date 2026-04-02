@@ -150,6 +150,12 @@ namespace AccordIn.Plugin.Services
         [JsonPropertyName("productName")]
         public string ProductName { get; set; }
 
+        [JsonPropertyName("description")]
+        public string Description { get; set; }
+
+        [JsonPropertyName("rationale")]
+        public string Rationale { get; set; }
+
         [JsonPropertyName("confidence")]
         public string Confidence { get; set; }
 

@@ -717,8 +717,90 @@ const CHAN_ICON={'online-meeting':'🖥','in-person':'🤝',phone:'📞',email:'
 const ROLE_CFG={'primary-relationship':{lbl:'Primary',cls:'rb-primary'},'opportunity-owner':{lbl:'Opp. Owner',cls:'rb-owner'},'approval-risk':{lbl:'⚠ Risk',cls:'rb-risk'},'low-priority':{lbl:'Low Priority',cls:'rb-low'},'no-data':{lbl:'No Data',cls:'rb-low'}};
 const ENG_CLS={High:'eb-h',Medium:'eb-m',Low:'eb-l',Unknown:'eb-u'};
 
+// ═══════════════════════════════════════════════════════════════
+// INSIGHT REF INFERENCE
+// Runs after plan is loaded from Dataverse. The plugin does not
+// generate insightRef fields so we infer them client-side by
+// matching each item's rationale text against the watchouts and
+// signals arrays. This powers the "See linked insight" links in
+// the rationale popovers.
+// ═══════════════════════════════════════════════════════════════
+function enrichPlanWithInsightRefs(plan) {
+  const watchouts = plan.watchouts || [];
+  const signals   = plan.positiveSignals || [];
+
+  // Build keyword index — for each watchout/signal extract key nouns
+  // A match is scored by how many keywords from the item's rationale
+  // appear in the watchout/signal text. Highest score wins.
+  function extractKeywords(text) {
+    if (!text) return [];
+    // Strip short words, punctuation, return lowercase tokens
+    return text.toLowerCase()
+      .replace(/[^a-z0-9\s\-]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 4);
+  }
+
+  function bestWatchoutMatch(rationaleText) {
+    if (!rationaleText || !watchouts.length) return null;
+    const rKw = extractKeywords(rationaleText);
+    let best = -1, bestIdx = -1;
+    watchouts.forEach((w, i) => {
+      const wKw = extractKeywords(w);
+      const score = rKw.filter(k => wKw.includes(k)).length;
+      if (score > best) { best = score; bestIdx = i; }
+    });
+    return best >= 2 ? `watchout:${bestIdx}` : null;
+  }
+
+  function bestSignalMatch(rationaleText) {
+    if (!rationaleText || !signals.length) return null;
+    const rKw = extractKeywords(rationaleText);
+    let best = -1, bestIdx = -1;
+    signals.forEach((s, i) => {
+      const sKw = extractKeywords(s);
+      const score = rKw.filter(k => sKw.includes(k)).length;
+      if (score > best) { best = score; bestIdx = i; }
+    });
+    return best >= 2 ? `signal:${bestIdx}` : null;
+  }
+
+  function inferRef(item) {
+    // If already has a ref (from mock data or future plugin support), keep it
+    if (item.insightRef) return item;
+
+    const text = (item.rationale || '') + ' ' + (item.description || '');
+
+    // Check for forecast references first (stage / confidence / negotiation keywords)
+    const forecastKw = ['negotiation','propose','qualify','discovery','stage','pipeline',
+                        'confidence','weighted','revenue','forecast'];
+    const textLower = text.toLowerCase();
+    if (forecastKw.some(k => textLower.includes(k))) {
+      item.insightRef = 'forecast';
+      return item;
+    }
+
+    // Try watchout match before signal — watchouts are more commonly the reason for actions
+    const wo = bestWatchoutMatch(text);
+    if (wo) { item.insightRef = wo; return item; }
+
+    const sig = bestSignalMatch(text);
+    if (sig) { item.insightRef = sig; return item; }
+
+    return item; // no ref found — popover will show rationale only, no scroll link
+  }
+
+  // Apply to all three item types
+  (plan.recommendations || []).forEach(r => inferRef(r));
+  (plan.cadences        || []).forEach(c => inferRef(c));
+  (plan.oneOffActions   || []).forEach(a => inferRef(a));
+
+  return plan;
+}
+
 function renderPlan(plan,acc,options={}){
   const preserveChat=!!options.preserveChat;
+  plan=enrichPlanWithInsightRefs(plan); // infer insightRef for real plans that lack them
   currentPlan=plan;
   const ini=n=>n?n.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase():'?';
   const isExisting=(currentPlanMode==='existing');

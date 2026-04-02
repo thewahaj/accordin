@@ -56,7 +56,7 @@ namespace AccordIn.Plugin
             {
                 var approveEntity = new Entity("wrl_accountplan", planId)
                 {
-                    ["wrl_planstatus"] = new OptionSetValue(3),
+                    ["wrl_planstatus"] = new OptionSetValue(1),
                     ["wrl_confirmationtimestamp"] = DateTime.UtcNow
                 };
 
@@ -139,6 +139,8 @@ namespace AccordIn.Plugin
                 {
                     D365Id = recommendation.D365Id,
                     ProductName = recommendation.ProductName,
+                    Description = recommendation.Description,
+                    Rationale = recommendation.Rationale,
                     Confidence = recommendation.Confidence,
                     EstimatedValue = (double)recommendation.EstimatedValue
                 });
@@ -312,6 +314,7 @@ Confidence values must be one of: high, medium, low
 
 Use complex_refine only if the instruction requires changes to multiple different record types simultaneously or requires understanding the full plan narrative.
 Use query for questions that do not require any record changes.
+For query responses, answer directly from the stripped plan context. Recommendation entries may include description and rationale to support ""why"" questions.
 Return JSON only. No markdown. No explanation.";
         }
 
