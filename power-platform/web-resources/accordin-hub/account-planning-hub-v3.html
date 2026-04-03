@@ -118,6 +118,22 @@ body{font-family:var(--font);background:var(--surface);color:var(--text);font-si
 .p-left{width:320px;flex-shrink:0;background:white;border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
 .p-left::-webkit-scrollbar{width:3px}.p-left::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 .p-sec{padding:14px 16px;border-bottom:1px solid var(--border)}
+/* Staggered reveal animation */
+@keyframes sectionReveal {
+  from { opacity:0; transform:translateY(8px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.p-sec { opacity:0; }
+.p-sec.reveal { animation:sectionReveal .35s ease forwards; }
+.p-sec.revealed { opacity:1; }
+
+@keyframes cardReveal {
+  from { opacity:0; transform:translateY(6px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.rec, .cad, .act { opacity:0; }
+.rec.reveal, .cad.reveal, .act.reveal { animation:cardReveal .3s ease forwards; }
+.rec.revealed, .cad.revealed, .act.revealed { opacity:1; }
 .p-sec:last-child{border-bottom:none}
 .sec-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:9px;display:flex;align-items:center;justify-content:space-between}
 .sec-toggle{font-size:10px;font-weight:500;color:var(--blue);cursor:pointer;letter-spacing:0;text-transform:none;border:none;background:none;font-family:var(--font)}
@@ -682,7 +698,10 @@ function switchTab(tab,el){
 }
 function switchMidTab(tab,el){
   document.querySelectorAll('.p-mid-tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');
-  if(tab==='plan')renderPlanTab(currentPlan);
+  if(tab==='plan'){
+    renderPlanTab(currentPlan);
+    setTimeout(triggerStaggeredReveal,50);
+  }
   else if(tab==='contacts')renderContactsTab(currentPlan);
 }
 function isPlanApproved(){
@@ -878,6 +897,7 @@ function renderPlan(plan,acc,options={}){
     setCopilotState('ready',acc?.name,plan);
   }
   generateQuickPrompts(plan);
+  setTimeout(triggerStaggeredReveal,50);
 }
 
 // ── CONTACT STRIP ────────────────────────────────────────────
@@ -918,6 +938,27 @@ function showContactsTab(){
 }
 
 // ── PLAN TAB ─────────────────────────────────────────────────
+function triggerStaggeredReveal() {
+  const sections = document.querySelectorAll('#pLeft .p-sec');
+  sections.forEach((sec, i) => {
+    sec.classList.remove('reveal', 'revealed');
+    setTimeout(() => {
+      sec.classList.add('reveal');
+      setTimeout(() => sec.classList.add('revealed'), 350);
+    }, i * 120);
+  });
+
+  const leftDelay = sections.length * 120 + 100;
+  const cards = document.querySelectorAll('#pMid .rec, #pMid .cad, #pMid .act');
+  cards.forEach((card, i) => {
+    card.classList.remove('reveal', 'revealed');
+    setTimeout(() => {
+      card.classList.add('reveal');
+      setTimeout(() => card.classList.add('revealed'), 300);
+    }, leftDelay + i * 80);
+  });
+}
+
 function renderPlanTab(plan){
   const atRisk=(plan.contactEngagement||[]).filter(c=>c.planRole==='approval-risk'&&!c.hasCadence);
   document.getElementById('pMid').innerHTML=`
@@ -1078,6 +1119,65 @@ document.addEventListener('click', (e)=>{
 // ═══════════════════════════════════════════════════════════════
 // COPILOT STATE + PROACTIVE MESSAGE
 // ═══════════════════════════════════════════════════════════════
+function buildReasoningTrace(plan, accountName) {
+  const contacts = plan.contactEngagement || [];
+  const recs = plan.recommendations || [];
+  const approvalRisk = contacts.find(c =>
+    c.planRole === 'approval-risk' && !c.hasCadence
+  );
+  const primaryRel = contacts.find(c =>
+    c.planRole === 'primary-relationship'
+  );
+  const topRec = recs[0];
+  const pipeline = plan.revenuePicture?.pipelineValue || 0;
+
+  function fmtVal(n) {
+    if (!n || n === 0) return '';
+    if (n >= 1000000) return ' at £' + (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return ' at £' + Math.round(n / 1000) + 'K';
+    return ' at £' + n;
+  }
+
+  function shortName(str) {
+    return (str || '').split('–')[0].split('—')[0].trim().substring(0, 40);
+  }
+
+  if (approvalRisk && pipeline > 0) {
+    const first = approvalRisk.name.split(' ')[0];
+    const role = approvalRisk.title.split('–')[0].split('-')[0].trim();
+    const recName = topRec?.productName ? shortName(topRec.productName) : 'the top opportunity';
+    return `I prioritised re-engaging ${first} (${role}) before pushing on ${recName}. ` +
+           `${first} controls budget approval across this account — without alignment there, ` +
+           `even a Negotiation-stage deal can stall at signature. ` +
+           `That dependency is the single highest-leverage point in this plan.`;
+  }
+
+  if (primaryRel && (
+    primaryRel.lastActivity === 'No activity recorded' ||
+    primaryRel.engagementLevel === 'Low'
+  )) {
+    const first = primaryRel.name.split(' ')[0];
+    const recName = topRec?.productName ? shortName(topRec.productName) : 'the primary opportunity';
+    return `${first} is the strategic anchor on this account but engagement has gone quiet. ` +
+           `I have kept ${recName} as the lead recommendation, but the cadence plan is built ` +
+           `around re-establishing that relationship first. ` +
+           `Commercial momentum without executive alignment rarely closes.`;
+  }
+
+  if (topRec && primaryRel) {
+    const recName = topRec.productName ? shortName(topRec.productName) : 'the top opportunity';
+    const val = fmtVal(topRec.estimatedValue);
+    const first = primaryRel.name.split(' ')[0];
+    return `The data points toward ${recName}${val} as the primary commercial thread. ` +
+           `${first} is the right relationship anchor — I have put the strategic cadence with them first. ` +
+           `The plan is structured to move pipeline forward without losing the executive thread.`;
+  }
+
+  return `This plan is built on limited data for ${accountName || 'this account'}. ` +
+         `I have applied industry best practices where account-specific signals were not available. ` +
+         `Treat the recommendations as a discovery framework and validate through direct engagement.`;
+}
+
 function setCopilotState(state, accountName, plan){
   const status=document.getElementById('chatStatus');
   const sub=document.getElementById('chatSub');
@@ -1103,24 +1203,9 @@ function setCopilotState(state, accountName, plan){
     if(sub)sub.textContent='Generating plan...';
     document.getElementById('qPrompts').innerHTML='';
   } else if(state==='ready'&&plan){
-    // Proactive message — connects the top insight to the top action
-    const topRec = plan.recommendations?.[0];
-    const topWatchout = plan.watchouts?.[0];
-    const approvalRisk = plan.contactEngagement?.find(c=>c.planRole==='approval-risk');
-
     if(chatHistory.length===0){
-      let msg = `Plan loaded for ${accountName||'this account'}.`;
-
-      if(topRec){
-        msg += ` The primary revenue driver is <strong>${(topRec.productName||'top recommendation').split('–')[0].split('—')[0].trim()}</strong> at ${fmt(topRec.estimatedValue)} — ${topRec.confidence} confidence.`;
-      }
-      if(approvalRisk&&!approvalRisk.hasCadence){
-        msg += ` <strong>${approvalRisk.name.split(' ')[0]}</strong> (${approvalRisk.title.split('–')[0].trim()}) is disengaged and controls budget approvals — this is your most urgent risk. Tap the <em>i</em> on any action to see why it was included.`;
-      } else if(topWatchout){
-        const short=topWatchout.length>120?topWatchout.substring(0,120)+'…':topWatchout;
-        msg += ` Key watchout: ${short}`;
-      }
-      chatHistory.push({role:'ai',text:msg,time:'Just now'});
+      const trace = buildReasoningTrace(plan, accountName);
+      chatHistory.push({ role: 'ai', text: trace, time: 'Just now' });
     }
     if(status)status.classList.remove('pulse');
     if(sub)sub.textContent='Refine this plan';
@@ -1163,17 +1248,47 @@ function renderCreateMode(){
   setCopilotState('idle');
 }
 function selIntent(el){document.querySelectorAll('.intent-opt').forEach(o=>o.classList.remove('on'));el.classList.add('on')}
-
+function startGenerationMessages() {
+  const messages = [
+    "Reading account history and open pipeline...",
+    "Checking contact engagement across the last 90 days...",
+    "Identifying signals and commercial triggers...",
+    "Sizing the pipeline by stage confidence...",
+    "Mapping approval dependencies across the buying group...",
+    "Looking for whitespace beyond current opportunities...",
+    "Weighing the primary relationship thread...",
+    "Assessing execution risk against pipeline stage...",
+    "Building the revenue case...",
+    "Structuring the plan...",
+    "Finalising cadence priorities...",
+    "Almost there..."
+  ];
+  let idx = 0;
+  const el = document.getElementById('genMessage');
+  if (!el) return null;
+  el.textContent = messages[0];
+  const interval = setInterval(() => {
+    idx = (idx + 1) % messages.length;
+    if (messages[idx] === "Almost there...") {
+      clearInterval(interval);
+    }
+    if (el) el.textContent = messages[idx];
+  }, 2800);
+  return interval;
+}
 async function generatePlan(){
   setCopilotState('generating');
+  let msgInterval = null;
   document.getElementById('pMid').innerHTML=`
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;padding:40px;">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:18px;padding:40px;">
       <div class="spin"></div>
-      <div style="font-size:13px;color:var(--text-muted)">Collecting account data from Dataverse...</div>
-      <div style="font-size:11px;color:var(--slate-lt);text-align:center;max-width:260px">Reading opportunities, contacts, activities and signals. Calling the planning copilot.</div>
+      <div id="genMessage" style="font-size:13px;color:var(--text-mid);text-align:center;max-width:280px;line-height:1.6;"></div>
+      <div style="font-size:11px;color:var(--slate-lt);text-align:center;max-width:240px">Calling the AccordIn planning copilot</div>
     </div>`;
+  msgInterval = startGenerationMessages();
   if(!API.isD365()){
     setTimeout(()=>{
+      if(msgInterval)clearInterval(msgInterval);
       currentPlanMode='new';
       document.getElementById('pLeft').style.display='flex';
       document.querySelectorAll('.p-tab').forEach(t=>t.classList.remove('on'));
@@ -1202,11 +1317,13 @@ async function generatePlan(){
       currentAccount.rawPlan=currentAccount.rawPlan||{};
       currentAccount.rawPlan.wrl_accountplanid=planId;
     }
+    if(msgInterval)clearInterval(msgInterval);
     document.getElementById('pLeft').style.display='flex';
     document.querySelectorAll('.p-tab').forEach(t=>t.classList.remove('on'));
     document.querySelectorAll('.p-tab')[0].classList.add('on');
     renderPlan(plan,currentAccount);
   }catch(e){
+    if(msgInterval)clearInterval(msgInterval);
     console.error('[AccordIn] generatePlan:',e);
     renderCreateMode();
     addMsg('ai',`<strong>Plan generation failed.</strong> ${e.message||'Check the plugin trace log.'}`);
