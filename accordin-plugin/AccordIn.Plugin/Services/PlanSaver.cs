@@ -134,7 +134,7 @@ namespace AccordIn.Plugin.Services
                 ["wrl_account"]            = new EntityReference("account", accountId),
                 ["wrl_plantype"]           = new OptionSetValue(Helpers.MapPlanType(data.PlanType)),
                 ["wrl_planstatus"]         = new OptionSetValue(0),   // 0 = Draft
-                ["wrl_planintent"]         = data.PlanIntent,
+                ["wrl_planintent"]         = PlanIntentLabel(data.PlanType),
                 ["wrl_aiopeningstatement"] = plan.OpeningStatement,
                 ["wrl_healthsummary"]      = plan.HealthSummary,
                 ["wrl_growthobjectives"]   = plan.GrowthObjectives,
@@ -285,6 +285,18 @@ namespace AccordIn.Plugin.Services
                 case "retention":    return "Retention";
                 case "relationship": return "Relationship";
                 default:             return "Cross-Sell";
+            }
+        }
+
+        private static string PlanIntentLabel(string planType)
+        {
+            switch ((planType ?? string.Empty).ToLowerInvariant())
+            {
+                case "upsell":       return "Upsell";
+                case "retention":
+                case "renewal":      return "Retention";
+                case "relationship": return "Relationship";
+                default:             return "Cross-sell";
             }
         }
 

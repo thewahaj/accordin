@@ -66,15 +66,27 @@ namespace AccordIn.Plugin
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(userMessage))
-                throw new InvalidPluginExecutionException("UserMessage is required for refinement.");
-
             var planRecord = service.Retrieve("wrl_accountplan", planId, new ColumnSet(
                 "wrl_planpayload",
                 "wrl_aiopeningstatement",
                 "wrl_healthsummary",
                 "wrl_growthobjectives",
-                "wrl_revenuetarget"));
+                "wrl_revenuetarget",
+                "wrl_confirmationtimestamp",
+                "wrl_generatedtimestamp",
+                "wrl_account"));
+
+            if (string.Equals(actionType, "health-check", StringComparison.OrdinalIgnoreCase))
+            {
+                var healthResponse = HandleHealthCheck(service, planId, planRecord, tracingService);
+                context.OutputParameters["ResponseMessage"] = healthResponse;
+                context.OutputParameters["IsPlanUpdate"] = false;
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(userMessage))
+                throw new InvalidPluginExecutionException("UserMessage is required for refinement.");
+
             var planPayloadJson = planRecord.GetAttributeValue<string>("wrl_planpayload");
 
             if (string.IsNullOrWhiteSpace(planPayloadJson))
@@ -102,6 +114,95 @@ namespace AccordIn.Plugin
 
             context.OutputParameters["ResponseMessage"] = outcome.ResponseMessage;
             context.OutputParameters["IsPlanUpdate"] = outcome.IsPlanUpdate;
+        }
+
+        private static string HandleHealthCheck(
+            IOrganizationService service,
+            Guid planId,
+            Entity planRecord,
+            ITracingService tracingService)
+        {
+            tracingService?.Trace("[AccordIn] RefinePlan - health-check requested");
+
+            var approvedAt = planRecord.GetAttributeValue<DateTime?>("wrl_confirmationtimestamp");
+            var generatedAt = planRecord.GetAttributeValue<DateTime?>("wrl_generatedtimestamp");
+            var baseline = approvedAt ?? generatedAt ?? DateTime.UtcNow.AddDays(-30);
+
+            tracingService?.Trace($"[AccordIn] Health-check baseline for plan {planId}: {baseline:yyyy-MM-dd}");
+
+            var accountRef = planRecord.GetAttributeValue<EntityReference>("wrl_account");
+            if (accountRef == null)
+                return "I could not find the account linked to this plan. Please check the plan record.";
+
+            var signalQuery = new QueryExpression("wrl_businesssignal")
+            {
+                ColumnSet = new ColumnSet(
+                    "wrl_signalsummary",
+                    "wrl_signalcategory",
+                    "wrl_signaltimestamp",
+                    "wrl_sentimentstatus",
+                    "wrl_sourcesystem")
+            };
+            signalQuery.Criteria.AddCondition("wrl_account", ConditionOperator.Equal, accountRef.Id);
+            signalQuery.Criteria.AddCondition("wrl_signaltimestamp", ConditionOperator.GreaterThan, baseline);
+            signalQuery.AddOrder("wrl_signaltimestamp", OrderType.Descending);
+
+            var newSignals = service.RetrieveMultiple(signalQuery).Entities;
+
+            tracingService?.Trace($"[AccordIn] Health-check: {newSignals.Count} new signals since {baseline:yyyy-MM-dd}");
+
+            if (newSignals.Count == 0)
+            {
+                var baselineLabel = approvedAt.HasValue ? "plan approval" : "plan generation";
+                return $"No new signals have been recorded since {baselineLabel} on " +
+                       $"{baseline:dd MMM yyyy}. The account data is unchanged. " +
+                       "The approved plan remains current.";
+            }
+
+            var sb = new StringBuilder();
+            var baselineDesc = approvedAt.HasValue ? "this plan was approved" : "this plan was generated";
+            sb.AppendLine($"Since {baselineDesc} on {baseline:dd MMM yyyy}, " +
+                          $"{newSignals.Count} new signal{(newSignals.Count > 1 ? "s have" : " has")} " +
+                          "been recorded for this account:");
+            sb.AppendLine();
+
+            foreach (var signal in newSignals)
+            {
+                var summary = signal.GetAttributeValue<string>("wrl_signalsummary") ?? "No summary";
+                var timestamp = signal.GetAttributeValue<DateTime?>("wrl_signaltimestamp") ?? baseline;
+                var sentiment = signal.GetAttributeValue<OptionSetValue>("wrl_sentimentstatus")?.Value;
+                var sentimentLabel = "Neutral";
+                if (sentiment == 1)
+                    sentimentLabel = "Positive";
+                else if (sentiment == 0 || sentiment == 3)
+                    sentimentLabel = "Risk";
+
+                sb.AppendLine($"- [{sentimentLabel}] {timestamp:dd MMM yyyy}: {summary}");
+            }
+
+            sb.AppendLine();
+
+            var riskSignals = new List<Entity>();
+            foreach (var signal in newSignals)
+            {
+                var sentiment = signal.GetAttributeValue<OptionSetValue>("wrl_sentimentstatus")?.Value;
+                if (sentiment == 0 || sentiment == 3)
+                    riskSignals.Add(signal);
+            }
+
+            if (riskSignals.Count > 0)
+            {
+                sb.AppendLine($"{riskSignals.Count} of these signal{(riskSignals.Count > 1 ? "s are" : " is")} " +
+                              "flagged as risk. You may want to review the plan cadences and actions " +
+                              "to address these. Ask me to update the plan if needed.");
+            }
+            else
+            {
+                sb.AppendLine("No risk signals detected. The new signals are informational. " +
+                              "The approved plan remains appropriate.");
+            }
+
+            return sb.ToString().Trim();
         }
 
         private static PlanContext BuildPlanContext(PlanResponse plan)

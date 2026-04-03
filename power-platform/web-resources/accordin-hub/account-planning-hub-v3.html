@@ -666,6 +666,7 @@ const MOCK_PLAN={
 let allAccounts=[],currentFilter='all',currentSearch='',msgCount=1;
 let currentPlanId=null,currentAccountId=null,currentAccount=null;
 let currentPlanMode='new',copilotOpen=false,currentPlan=null;
+let currentIntentType='cross-sell',currentIntentDesc='Expand into new products or services';
 let chatHistory=[]; // persists across renderPlan() calls for the current session
 let chatBusy=false;
 
@@ -796,7 +797,11 @@ function closePanel(){
 function switchTab(tab,el){
   document.querySelectorAll('.p-tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');
   if(tab==='view'){if(currentPlan)renderPlan(currentPlan,currentAccount);else openAccount(currentAccount?.id);}
-  else if(tab==='create')renderCreateMode();
+  else if(tab==='create'){
+    currentPlanMode='new';
+    currentPlanId=null;
+    renderCreateMode();
+  }
   else if(tab==='history')renderHistory();
 }
 function switchMidTab(tab,el){
@@ -1394,12 +1399,22 @@ function setCopilotState(state, accountName, plan){
 function generateQuickPrompts(plan){
   const rec0=plan.recommendations?.[0];
   const riskContact=plan.contactEngagement?.find(c=>c.planRole==='approval-risk');
-  const prompts=[
+  let prompts;
+  if(currentPlanMode==='existing'){
+    prompts=[
+      'Anything new since approval?',
+      riskContact?`${riskContact.name.split(' ')[0]} still a risk?`:'Any new risks?',
+      'What needs attention this week?',
+      'Is the plan still on track?'
+    ];
+  }else{
+  prompts=[
     rec0?`Why ${(rec0.productName||'top rec').split('–')[0].split('—')[0].trim().substring(0,26)} first?`:'Why top recommendation?',
     riskContact?`${riskContact.name.split(' ')[0]} risk?`:'Approval risk?',
     'Who to contact first?',
     'What needs this week?'
   ];
+  }
   document.getElementById('qPrompts').innerHTML=prompts.map(p=>`<button class="q-btn" onclick="qprompt(this)">${p}</button>`).join('');
 }
 
@@ -1407,6 +1422,8 @@ function generateQuickPrompts(plan){
 // CREATE MODE
 // ═══════════════════════════════════════════════════════════════
 function renderCreateMode(){
+  currentIntentType='cross-sell';
+  currentIntentDesc='Expand into new products or services';
   document.getElementById('pLeft').style.display='none';
   document.getElementById('contactStripWrap').style.display='none';
   document.getElementById('pMidTabs').style.display='none';
@@ -1425,7 +1442,12 @@ function renderCreateMode(){
     </div>`;
   setCopilotState('idle');
 }
-function selIntent(el){document.querySelectorAll('.intent-opt').forEach(o=>o.classList.remove('on'));el.classList.add('on')}
+function selIntent(el){
+  document.querySelectorAll('#pMid .intent-opt').forEach(o=>o.classList.remove('on'));
+  el.classList.add('on');
+  currentIntentType=(el.querySelector('.intent-lbl')?.textContent||'Cross-sell').trim().toLowerCase();
+  currentIntentDesc=(el.querySelector('.intent-desc')?.textContent||'').trim();
+}
 function startGenerationMessages() {
   const stages = [
     { icon: '📋', text: 'Reading account history and open pipeline...' },
@@ -1506,10 +1528,8 @@ async function generatePlan(){
   }
   try{
     if(!currentAccountId)throw new Error('No account selected.');
-    const intentLabel=document.querySelector('.intent-opt.on .intent-lbl')?.textContent||'Cross-sell';
-    const intentDesc=document.querySelector('.intent-opt.on .intent-desc')?.textContent||'';
     const request={
-      AccountId:currentAccountId,PlanIntent:intentDesc||intentLabel,PlanType:intentLabel.toLowerCase(),
+      AccountId:currentAccountId,PlanIntent:currentIntentDesc||currentIntentType,PlanType:currentIntentType,
       getMetadata:function(){return{boundParameter:null,parameterTypes:{AccountId:{typeName:'Edm.String',structuralProperty:1},PlanIntent:{typeName:'Edm.String',structuralProperty:1},PlanType:{typeName:'Edm.String',structuralProperty:1}},operationType:0,operationName:'accordin_GeneratePlan'};}
     };
     const response=await API.xrm().WebApi.online.execute(request);
@@ -1561,6 +1581,10 @@ function renderHistory(){
 // CHAT
 // ═══════════════════════════════════════════════════════════════
 const RESPONSES={
+  'anything new':'In the connected system, I would check for signals added since plan approval and tell you what changed. For now, ask me about specific contacts or opportunities.',
+  'still on track':'I would check cadence completion and action status against due dates to confirm execution health. Ask me about a specific concern.',
+  'what changed':'I would surface any new signals, stage changes, or contact engagement shifts since this plan was approved.',
+  'any updates':'No new signals in mock mode. In the live system I would check for signals newer than the plan approval date.',
   'jebel ali':'Jebel Ali Port Premium Berthing is in Negotiation stage — the highest pipeline stage in this account. At 85% confidence it contributes £612,000 to the revenue floor. Commercial terms were reviewed on 2026-02-13. Tap the i icon on that recommendation to see the linked insight.',
   'sophia':'Sophia Martinez has not engaged since 2025-11-22. With £3.84M in open pipeline, her budget approval is required for all seven opportunities. She is flagged as approval-risk with no cadence. Tap the i icon on the Finance Controller Re-engagement cadence to see the linked watchout.',
   'risk':'Sophia Martinez (Finance Controller) has not engaged since 2025-11-22. Her approval is required for all seven pipeline opportunities. The plan includes a re-engagement cadence and a one-off action to address this.',
@@ -1606,14 +1630,19 @@ async function sendChat(){
   if(!txt||chatBusy)return;
   const sub=document.getElementById('chatSub');
   const status=document.getElementById('chatStatus');
+  const healthCheckPhrases=[
+    'anything new','what changed','new signals','since approval',
+    'still on track','health check','any updates','what\'s new'
+  ];
+  const isHealthCheck=healthCheckPhrases.some(p=>txt.toLowerCase().includes(p));
   chatBusy=true;
   addMsg('user',txt);ta.value='';ta.style.height='auto';
   if(API.isD365()&&currentPlanId){
-    const request={PlanId:currentPlanId,UserMessage:txt,getMetadata:function(){return{boundParameter:null,parameterTypes:{PlanId:{typeName:'Edm.String',structuralProperty:1},UserMessage:{typeName:'Edm.String',structuralProperty:1}},operationType:0,operationName:'accordin_RefinePlan'};}};
+    const request={PlanId:currentPlanId,UserMessage:txt,ActionType:isHealthCheck?'health-check':'refine',getMetadata:function(){return{boundParameter:null,parameterTypes:{PlanId:{typeName:'Edm.String',structuralProperty:1},UserMessage:{typeName:'Edm.String',structuralProperty:1},ActionType:{typeName:'Edm.String',structuralProperty:1}},operationType:0,operationName:'accordin_RefinePlan'};}};
     try{
       if(status)status.classList.add('pulse');
-      if(sub)sub.textContent='Applying refinement...';
-      setChatPending('Processing your refinement...');
+      if(sub)sub.textContent=isHealthCheck?'Checking account health...':'Applying refinement...';
+      setChatPending(isHealthCheck?'Reviewing signals since plan approval...':'Processing your refinement...');
       const response=await API.xrm().WebApi.online.execute(request);
       const result=await response.json();
       clearChatPending();
