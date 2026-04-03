@@ -236,6 +236,42 @@ body{font-family:var(--font);background:var(--surface);color:var(--text);font-si
 .rec-prod{font-size:13px;font-weight:600;color:var(--text);line-height:1.2}.rec-type{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
 .conf-b{font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;flex-shrink:0;margin-left:auto}
 .cb-h{background:var(--green-pale);color:var(--green)}.cb-m{background:var(--amber-pale);color:var(--amber)}.cb-l{background:var(--surface);color:var(--slate)}
+
+/* Reason type badges */
+.rt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+.rt-data{background:#eff6ff;color:#2463eb;border:1px solid #bfdbfe}
+.rt-pattern{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0}
+.rt-best-practice{background:#f8fafc;color:#64748b;border:1px solid #e2e8f0}
+
+/* Evidence count */
+.evidence-count {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Override marker */
+.override-marker {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--amber);
+  background: var(--amber-pale);
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid #fde68a;
+  white-space: nowrap;
+}
 .rec-val{font-size:17px;font-weight:700;color:var(--blue);font-family:var(--mono);margin-bottom:5px}
 .rec-desc{font-size:12px;color:var(--text-mid);line-height:1.5;margin-bottom:4px}
 
@@ -1026,6 +1062,58 @@ function triggerStaggeredReveal() {
   });
 }
 
+function reasonTypeBadge(r) {
+  if (!r) return '';
+  const cfg = {
+    'data': { cls: 'rt-data', label: 'Data-driven' },
+    'pattern': { cls: 'rt-pattern', label: 'Pattern-based' },
+    'best_practice': { cls: 'rt-best-practice', label: 'Best practice' }
+  };
+  const c = cfg[r.reasonType] || cfg['best_practice'];
+  return `<span class="rt-badge ${c.cls}">${c.label}</span>`;
+}
+
+function evidenceCountLabel(r) {
+  if (!r) return '';
+  if (r.evidenceCount === 0 || r.reasonType === 'best_practice') {
+    return `<span class="evidence-count">No direct signals</span>`;
+  }
+  const plural = r.evidenceCount === 1 ? 'signal' : 'signals';
+  return `<span class="evidence-count">Backed by ${r.evidenceCount} ${plural}</span>`;
+}
+
+function buildPopoverContent(rationale, reasoning, insightRef, popId) {
+  const signalsList = reasoning?.signals?.length
+    ? `<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">
+         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:5px">Evidence</div>
+         ${reasoning.signals.map(s =>
+           `<div style="font-size:11px;color:var(--text-mid);margin-bottom:3px;display:flex;gap:6px;align-items:flex-start">
+             <span style="color:var(--blue);flex-shrink:0">·</span>${s.summary}
+           </div>`
+         ).join('')}
+       </div>`
+    : '';
+
+  const explanationEl = reasoning?.explanation
+    ? `<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-top:6px">${reasoning.explanation}</div>`
+    : '';
+
+  const insightLink = insightRef
+    ? `<div class="rat-pop-link" onclick="scrollToInsight('${insightRef}','${popId}')">See linked insight</div>`
+    : '';
+
+  return `
+    <div class="rat-pop-title">Why this item</div>
+    <div style="display:flex;gap:5px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+      ${reasoning ? reasonTypeBadge(reasoning) : ''}
+      ${reasoning ? evidenceCountLabel(reasoning) : ''}
+    </div>
+    <div class="rat-pop-text">${rationale || '—'}</div>
+    ${explanationEl}
+    ${signalsList}
+    ${insightLink}`;
+}
+
 function renderPlanTab(plan){
   const atRisk=(plan.contactEngagement||[]).filter(c=>c.planRole==='approval-risk'&&!c.hasCadence);
   document.getElementById('pMid').innerHTML=`
@@ -1037,13 +1125,19 @@ function renderPlanTab(plan){
         return `<div class="rec" id="rec-${i}">
           <button class="rat-btn" onclick="toggleReasonPopover(event,'pop-rec-${i}')" title="Why this recommendation?">i</button>
           <div class="rat-pop" id="pop-rec-${i}">
-            <div class="rat-pop-title">Why this recommendation</div>
-            <div class="rat-pop-text">${r.rationale}</div>
-            ${r.insightRef?`<div class="rat-pop-link" onclick="scrollToInsight('${r.insightRef}','pop-rec-${i}')">See linked insight</div>`:''}
+            ${buildPopoverContent(r.rationale, r.reasoning, r.insightRef, `pop-rec-${i}`)}
           </div>
           <div class="rec-hdr">
             <div class="rec-num">${i+1}</div>
-            <div style="flex:1"><div class="rec-prod">${r.productName||r.type}</div><div class="rec-type">${r.type}</div></div>
+            <div style="flex:1">
+              <div class="rec-prod">${r.productName||r.type}</div>
+              <div class="rec-type">${r.type}</div>
+              <div style="display:flex;gap:5px;align-items:center;margin-top:4px;flex-wrap:wrap">
+                ${reasonTypeBadge(r.reasoning)}
+                ${evidenceCountLabel(r.reasoning)}
+                ${r.userOverride?.isOverridden ? '<span class="override-marker">Adjusted by Account Manager</span>' : ''}
+              </div>
+            </div>
             <span class="conf-b ${cc}">${r.confidence}</span>
           </div>
           <div class="rec-val">${fmt(r.estimatedValue)}</div>
@@ -1057,13 +1151,16 @@ function renderPlanTab(plan){
         <div class="cad" id="cad-${i}">
           <button class="rat-btn" onclick="toggleReasonPopover(event,'pop-cad-${i}')" title="Why this cadence?">i</button>
           <div class="rat-pop" id="pop-cad-${i}">
-            <div class="rat-pop-title">Why this cadence</div>
-            <div class="rat-pop-text">${c.rationale}</div>
-            ${c.insightRef?`<div class="rat-pop-link" onclick="scrollToInsight('${c.insightRef}','pop-cad-${i}')">See linked insight</div>`:''}
+            ${buildPopoverContent(c.rationale, c.reasoning, c.insightRef, `pop-cad-${i}`)}
           </div>
           <div class="cad-icon">${CHAN_ICON[c.channel]||'📅'}</div>
           <div style="flex:1">
             <div class="cad-name">${c.name}</div>
+            <div style="display:flex;gap:5px;align-items:center;margin:4px 0;flex-wrap:wrap">
+              ${reasonTypeBadge(c.reasoning)}
+              ${evidenceCountLabel(c.reasoning)}
+              ${c.userOverride?.isOverridden ? '<span class="override-marker">Adjusted by Account Manager</span>' : ''}
+            </div>
             ${(c.contactName&&c.contactName!==c.contactTitle)?`<div class="cad-contact">${c.contactName}</div><div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">${c.contactTitle}</div>`:`<div class="cad-contact">${c.contactName||c.contactTitle}</div>`}
             <div class="cad-chips">
               <span class="cad-chip">${c.contactTitle}</span>
@@ -1082,12 +1179,18 @@ function renderPlanTab(plan){
         return `<div class="act" id="act-${i}">
           <button class="rat-btn" onclick="toggleReasonPopover(event,'pop-act-${i}')" title="Why this action?">i</button>
           <div class="rat-pop" id="pop-act-${i}">
-            <div class="rat-pop-title">Why this action</div>
-            <div class="rat-pop-text">${a.rationale}</div>
-            ${a.insightRef?`<div class="rat-pop-link" onclick="scrollToInsight('${a.insightRef}','pop-act-${i}')">See linked insight</div>`:''}
+            ${buildPopoverContent(a.rationale, a.reasoning, a.insightRef, `pop-act-${i}`)}
           </div>
           <span class="prio-b ${pc}">${a.priority}</span>
-          <div><div class="act-desc">${a.description}</div><div class="act-timing">${CHAN_ICON[a.channel]||''} ${a.channel} · ${a.suggestedTiming}</div></div>
+          <div>
+            <div style="display:flex;gap:5px;align-items:center;margin-bottom:4px;flex-wrap:wrap">
+              ${reasonTypeBadge(a.reasoning)}
+              ${evidenceCountLabel(a.reasoning)}
+              ${a.userOverride?.isOverridden ? '<span class="override-marker">Adjusted by Account Manager</span>' : ''}
+            </div>
+            <div class="act-desc">${a.description}</div>
+            <div class="act-timing">${CHAN_ICON[a.channel]||''} ${a.channel} · ${a.suggestedTiming}</div>
+          </div>
         </div>`;
       }).join('')}
     </div>`;
@@ -1206,7 +1309,7 @@ function buildReasoningTrace(plan, accountName) {
   }
 
   function shortName(str) {
-    return (str || '').split('–')[0].split('—')[0].trim().substring(0, 45);
+    return (str || '').split('–')[0].split('—')[0].trim().substring(0, 60);
   }
 
   if (approvalRisk && pipeline > 0) {

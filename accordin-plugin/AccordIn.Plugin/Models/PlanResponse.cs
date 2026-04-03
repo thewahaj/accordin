@@ -165,6 +165,33 @@ namespace AccordIn.Plugin.Models
         public string ConfidenceBand { get; set; }
     }
 
+    public class ReasoningSignal
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("summary")]
+        public string Summary { get; set; }
+    }
+
+    public class ReasoningBlock
+    {
+        [JsonProperty("reasonType")]
+        public string ReasonType { get; set; }
+
+        [JsonProperty("confidenceScore")]
+        public string ConfidenceScore { get; set; }
+
+        [JsonProperty("evidenceCount")]
+        public int EvidenceCount { get; set; }
+
+        [JsonProperty("signals")]
+        public List<ReasoningSignal> Signals { get; set; } = new List<ReasoningSignal>();
+
+        [JsonProperty("explanation")]
+        public string Explanation { get; set; }
+    }
+
     public class Recommendation
     {
         [JsonProperty("d365Id", NullValueHandling = NullValueHandling.Include)]
@@ -195,6 +222,9 @@ namespace AccordIn.Plugin.Models
 
         [JsonProperty("confidenceReason")]
         public string ConfidenceReason { get; set; }
+
+        [JsonProperty("reasoning")]
+        public ReasoningBlock Reasoning { get; set; }
     }
 
     public class Cadence
@@ -234,6 +264,9 @@ namespace AccordIn.Plugin.Models
         /// <summary>Must cite last activity date, engagement level, strategic role, and frequency justification.</summary>
         [JsonProperty("rationale")]
         public string Rationale { get; set; }
+
+        [JsonProperty("reasoning")]
+        public ReasoningBlock Reasoning { get; set; }
     }
 
     public class OneOffAction
@@ -259,5 +292,8 @@ namespace AccordIn.Plugin.Models
         /// <summary>Must cite a specific date, contact name, activity, or signal.</summary>
         [JsonProperty("rationale")]
         public string Rationale { get; set; }
+
+        [JsonProperty("reasoning")]
+        public ReasoningBlock Reasoning { get; set; }
     }
 }
