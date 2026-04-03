@@ -245,7 +245,7 @@ namespace AccordIn.Plugin
         {
             var query = new QueryExpression("wrl_intentprompt")
             {
-                ColumnSet = new ColumnSet(false),
+                ColumnSet = new ColumnSet("wrl_systemprompt"),
                 Criteria = new FilterExpression
                 {
                     Conditions =
@@ -262,8 +262,11 @@ namespace AccordIn.Plugin
                     $"AccordIn GeneratePlan: no system prompt found for intent type '{planType}'. " +
                     $"Create a wrl_intentprompt record with wrl_intenttype = '{planType}'.");
 
-            var recordId = results[0].Id;
-            var recordRef = new EntityReference("wrl_intentprompt", recordId);
+            var textPrompt = results[0].GetAttributeValue<string>("wrl_systemprompt");
+            if (!string.IsNullOrWhiteSpace(textPrompt))
+                return textPrompt.Trim();
+
+            var recordRef = results[0].ToEntityReference();
 
             try
             {
