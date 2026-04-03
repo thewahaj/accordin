@@ -303,6 +303,72 @@ body{font-family:var(--font);background:var(--surface);color:var(--text);font-si
 .intent-opt:hover,.intent-opt.on{border-color:var(--blue);background:var(--blue-pale)}
 .intent-emoji{font-size:18px}.intent-lbl{font-size:13px;font-weight:600;color:var(--text)}.intent-desc{font-size:11px;color:var(--text-muted)}
 .spin{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+/* Icon-driven generation loading */
+.gen-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 20px;
+  padding: 40px;
+}
+.gen-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: var(--navy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  transition: all .4s ease;
+  box-shadow: 0 4px 20px rgba(14,30,53,.2);
+}
+.gen-icon-wrap.pulse-in {
+  animation: iconPulse .4s ease;
+}
+@keyframes iconPulse {
+  0%   { transform: scale(.85); opacity: .6; }
+  60%  { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+.gen-message {
+  font-size: 13px;
+  color: var(--text-mid);
+  text-align: center;
+  max-width: 300px;
+  line-height: 1.65;
+  font-weight: 500;
+  letter-spacing: -.01em;
+  min-height: 44px;
+  transition: opacity .25s ease;
+}
+.gen-sub {
+  font-size: 11px;
+  color: var(--slate-lt);
+  text-align: center;
+  max-width: 240px;
+  letter-spacing: .01em;
+}
+.gen-dots {
+  display: flex;
+  gap: 5px;
+  margin-top: 4px;
+}
+.gen-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--navy-border, #263f60);
+  animation: dotPulse 1.4s ease infinite;
+}
+.gen-dot:nth-child(2) { animation-delay: .2s; }
+.gen-dot:nth-child(3) { animation-delay: .4s; }
+@keyframes dotPulse {
+  0%, 80%, 100% { transform: scale(.7); opacity: .4; }
+  40%            { transform: scale(1);  opacity: 1;  }
+}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── RESPONSIVE ──────────────────────────────────────────────── */
@@ -1120,8 +1186,8 @@ document.addEventListener('click', (e)=>{
 // COPILOT STATE + PROACTIVE MESSAGE
 // ═══════════════════════════════════════════════════════════════
 function buildReasoningTrace(plan, accountName) {
-  const contacts = plan.contactEngagement || [];
-  const recs = plan.recommendations || [];
+  const contacts  = plan.contactEngagement || [];
+  const recs      = plan.recommendations   || [];
   const approvalRisk = contacts.find(c =>
     c.planRole === 'approval-risk' && !c.hasCadence
   );
@@ -1129,17 +1195,17 @@ function buildReasoningTrace(plan, accountName) {
     c.planRole === 'primary-relationship'
   );
   const topRec = recs[0];
-  const pipeline = plan.revenuePicture?.pipelineValue || 0;
+  const pipeline  = plan.revenuePicture?.pipelineValue || 0;
 
   function fmtVal(n) {
     if (!n || n === 0) return '';
     if (n >= 1000000) return ' at £' + (n / 1000000).toFixed(1) + 'M';
-    if (n >= 1000) return ' at £' + Math.round(n / 1000) + 'K';
+    if (n >= 1000)    return ' at £' + Math.round(n / 1000) + 'K';
     return ' at £' + n;
   }
 
   function shortName(str) {
-    return (str || '').split('–')[0].split('—')[0].trim().substring(0, 40);
+    return (str || '').split('–')[0].split('—')[0].trim().substring(0, 45);
   }
 
   if (approvalRisk && pipeline > 0) {
@@ -1249,30 +1315,55 @@ function renderCreateMode(){
 }
 function selIntent(el){document.querySelectorAll('.intent-opt').forEach(o=>o.classList.remove('on'));el.classList.add('on')}
 function startGenerationMessages() {
-  const messages = [
-    "Reading account history and open pipeline...",
-    "Checking contact engagement across the last 90 days...",
-    "Identifying signals and commercial triggers...",
-    "Sizing the pipeline by stage confidence...",
-    "Mapping approval dependencies across the buying group...",
-    "Looking for whitespace beyond current opportunities...",
-    "Weighing the primary relationship thread...",
-    "Assessing execution risk against pipeline stage...",
-    "Building the revenue case...",
-    "Structuring the plan...",
-    "Finalising cadence priorities...",
-    "Almost there..."
+  const stages = [
+    { icon: '📋', text: 'Reading account history and open pipeline...' },
+    { icon: '👥', text: 'Checking contact engagement across the last 90 days...' },
+    { icon: '📡', text: 'Identifying signals and commercial triggers...' },
+    { icon: '📊', text: 'Sizing the pipeline by stage confidence...' },
+    { icon: '🔗', text: 'Mapping approval dependencies across the buying group...' },
+    { icon: '🔍', text: 'Looking for whitespace beyond current opportunities...' },
+    { icon: '🧭', text: 'Weighing the primary relationship thread...' },
+    { icon: '⚖️',  text: 'Assessing execution risk against pipeline stage...' },
+    { icon: '💷', text: 'Building the revenue case...' },
+    { icon: '📝', text: 'Structuring the plan...' },
+    { icon: '✓',  text: 'Finalising cadence priorities...' },
+    { icon: '◈',  text: 'Almost there...' }
   ];
+
   let idx = 0;
-  const el = document.getElementById('genMessage');
-  if (!el) return null;
-  el.textContent = messages[0];
+  const iconEl = document.getElementById('genIcon');
+  const msgEl  = document.getElementById('genMessage');
+  if (!iconEl || !msgEl) return null;
+
+  // Set initial state
+  iconEl.textContent = stages[0].icon;
+  msgEl.textContent  = stages[0].text;
+
   const interval = setInterval(() => {
-    idx = (idx + 1) % messages.length;
-    if (messages[idx] === "Almost there...") {
+    idx++;
+    if (idx >= stages.length) {
+      idx = stages.length - 1; // stay on last stage
       clearInterval(interval);
     }
-    if (el) el.textContent = messages[idx];
+
+    // Fade message out, swap, fade back in
+    if (msgEl) {
+      msgEl.style.opacity = '0';
+      setTimeout(() => {
+        if (msgEl) msgEl.textContent = stages[idx].text;
+        if (msgEl) msgEl.style.opacity = '1';
+      }, 200);
+    }
+
+    // Pulse the icon and swap
+    if (iconEl) {
+      iconEl.classList.remove('pulse-in');
+      void iconEl.offsetWidth; // force reflow to restart animation
+      iconEl.classList.add('pulse-in');
+      setTimeout(() => {
+        if (iconEl) iconEl.textContent = stages[idx].icon;
+      }, 100);
+    }
   }, 2800);
   return interval;
 }
@@ -1280,11 +1371,16 @@ async function generatePlan(){
   setCopilotState('generating');
   let msgInterval = null;
   document.getElementById('pMid').innerHTML=`
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:18px;padding:40px;">
-      <div class="spin"></div>
-      <div id="genMessage" style="font-size:13px;color:var(--text-mid);text-align:center;max-width:280px;line-height:1.6;"></div>
-      <div style="font-size:11px;color:var(--slate-lt);text-align:center;max-width:240px">Calling the AccordIn planning copilot</div>
-    </div>`;
+  <div class="gen-stage">
+    <div class="gen-icon-wrap" id="genIcon">📋</div>
+    <div class="gen-message" id="genMessage"></div>
+    <div class="gen-sub">Calling the AccordIn planning copilot</div>
+    <div class="gen-dots">
+      <div class="gen-dot"></div>
+      <div class="gen-dot"></div>
+      <div class="gen-dot"></div>
+    </div>
+  </div>`;
   msgInterval = startGenerationMessages();
   if(!API.isD365()){
     setTimeout(()=>{
