@@ -151,6 +151,20 @@ When an approved plan is opened:
 - right side keeps the familiar approved-plan view
 - left side becomes a focused review panel
 
+## Product Note: New Plan Creation Flow
+
+There is also a related idea to explore for newly generated plans, not just already approved plans:
+
+- today the flow is effectively `create plan -> show insights`
+- a potentially better flow may be `show insights -> create plan`
+
+Reason:
+
+- for new plans, leading with insights may help the user understand the account context first
+- that may make plan creation feel more deliberate and grounded in evidence rather than presenting a plan too early
+
+This is not a committed workflow change yet, just a product thought worth revisiting once the approved-plan monitoring direction is clearer.
+
 Suggested left-side sections:
 
 - `New Since Approval`

@@ -42,6 +42,7 @@ body{font-family:var(--font);background:var(--surface);color:var(--text);font-si
 .btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:var(--r);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;border:none;font-family:var(--font);white-space:nowrap;flex-shrink:0}
 .btn-primary{background:var(--blue);color:white}.btn-primary:hover{background:var(--blue-lt)}
 .btn-secondary{background:white;color:var(--text-mid);border:1px solid var(--border);box-shadow:var(--xs)}.btn-secondary:hover{background:var(--surface)}
+.btn:disabled{background:var(--border-md);color:var(--white);cursor:not-allowed;opacity:.75;box-shadow:none}
 
 /* ── HUB ─────────────────────────────────────────────────────── */
 .main{padding:22px 24px;max-width:1440px}
@@ -203,7 +204,7 @@ body{font-family:var(--font);background:var(--surface);color:var(--text);font-si
 .rat-btn:hover{background:var(--navy);color:white;border-color:var(--navy)}
 
 /* Rationale popover */
-.rat-pop{display:none;position:absolute;top:32px;right:0;width:280px;background:white;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--md);z-index:50;padding:12px 14px}
+.rat-pop{display:none;position:absolute;top:32px;left:10px;right:10px;width:auto;max-width:320px;background:white;border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--md);z-index:50;padding:12px 14px}
 .rat-pop.open{display:block;animation:fadeUp .15s ease}
 .rat-pop-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:6px}
 .rat-pop-text{font-size:12px;color:var(--text-mid);line-height:1.6;margin-bottom:8px}
@@ -388,7 +389,7 @@ body{font-family:var(--font);background:var(--surface);color:var(--text);font-si
     </div>
     <div class="p-hdr-right">
       <button class="btn btn-secondary" style="font-size:11px;padding:5px 10px">⬇ Export</button>
-      <button class="btn btn-primary" style="font-size:11px;padding:5px 10px" onclick="approvePlan()">✓ Approve</button>
+      <button class="btn btn-primary" id="approveBtn" style="font-size:11px;padding:5px 10px" onclick="approvePlan()">✓ Approve</button>
     </div>
   </div>
 
@@ -684,7 +685,19 @@ function switchMidTab(tab,el){
   if(tab==='plan')renderPlanTab(currentPlan);
   else if(tab==='contacts')renderContactsTab(currentPlan);
 }
+function isPlanApproved(){
+  return currentAccount?.planStatus==='active' || currentAccount?.rawPlan?.wrl_planstatus===1;
+}
+function refreshApproveButton(){
+  const btn=document.getElementById('approveBtn');
+  if(!btn)return;
+  const approved=isPlanApproved();
+  btn.disabled=approved;
+  btn.textContent=approved?'✓ Approved':'✓ Approve';
+  btn.title=approved?'This plan is already approved.':'Approve this plan';
+}
 async function approvePlan(){
+  if(isPlanApproved()) return;
   if(API.isD365()&&currentPlanId){
     const request={
       PlanId:currentPlanId,
@@ -699,6 +712,7 @@ async function approvePlan(){
         currentAccount.rawPlan=currentAccount.rawPlan||{};
         currentAccount.rawPlan.wrl_planstatus=1;
       }
+      refreshApproveButton();
       renderSummary();renderTable();
       addMsg('ai',result.ResponseMessage||'Plan approved. Status updated to Active in Dataverse. Cadences and actions are now live.');
     }catch(e){
@@ -802,6 +816,7 @@ function renderPlan(plan,acc,options={}){
   const preserveChat=!!options.preserveChat;
   plan=enrichPlanWithInsightRefs(plan); // infer insightRef for real plans that lack them
   currentPlan=plan;
+  refreshApproveButton();
   const ini=n=>n?n.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase():'?';
   const isExisting=(currentPlanMode==='existing');
 
@@ -912,7 +927,7 @@ function renderPlanTab(plan){
       ${(plan.recommendations||[]).map((r,i)=>{
         const cc={high:'cb-h',medium:'cb-m',low:'cb-l'}[r.confidence]||'cb-m';
         return `<div class="rec" id="rec-${i}">
-          <button class="rat-btn" onclick="togglePopover(event,'pop-rec-${i}')" title="Why this recommendation?">i</button>
+          <button class="rat-btn" onclick="toggleReasonPopover(event,'pop-rec-${i}')" title="Why this recommendation?">i</button>
           <div class="rat-pop" id="pop-rec-${i}">
             <div class="rat-pop-title">Why this recommendation</div>
             <div class="rat-pop-text">${r.rationale}</div>
@@ -932,7 +947,7 @@ function renderPlanTab(plan){
       <div class="m-hdr"><span class="m-title">Engagement Cadences</span><span class="m-count">${(plan.cadences||[]).length}</span></div>
       ${(plan.cadences||[]).map((c,i)=>`
         <div class="cad" id="cad-${i}">
-          <button class="rat-btn" onclick="togglePopover(event,'pop-cad-${i}')" title="Why this cadence?">i</button>
+          <button class="rat-btn" onclick="toggleReasonPopover(event,'pop-cad-${i}')" title="Why this cadence?">i</button>
           <div class="rat-pop" id="pop-cad-${i}">
             <div class="rat-pop-title">Why this cadence</div>
             <div class="rat-pop-text">${c.rationale}</div>
@@ -957,7 +972,7 @@ function renderPlanTab(plan){
       ${(plan.oneOffActions||[]).map((a,i)=>{
         const pc={high:'pb-h',medium:'pb-m',low:'pb-l'}[a.priority]||'pb-m';
         return `<div class="act" id="act-${i}">
-          <button class="rat-btn" onclick="togglePopover(event,'pop-act-${i}')" title="Why this action?">i</button>
+          <button class="rat-btn" onclick="toggleReasonPopover(event,'pop-act-${i}')" title="Why this action?">i</button>
           <div class="rat-pop" id="pop-act-${i}">
             <div class="rat-pop-title">Why this action</div>
             <div class="rat-pop-text">${a.rationale}</div>
@@ -998,7 +1013,7 @@ function renderContactsTab(plan){
 // ═══════════════════════════════════════════════════════════════
 // RATIONALE POPOVERS + SCROLL-TO-INSIGHT
 // ═══════════════════════════════════════════════════════════════
-function togglePopover(e, popId){
+function toggleReasonPopover(e, popId){
   e.stopPropagation();
   const pop=document.getElementById(popId);
   const isOpen=pop.classList.contains('open');

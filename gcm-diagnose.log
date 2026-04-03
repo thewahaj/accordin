@@ -1,0 +1,201 @@
+﻿Diagnose log at 2026-04-03T00:11:05Z
+
+AppPath: C:\Program Files\Git\mingw64\bin\git-credential-manager.exe
+InstallDir: C:\Program Files\Git\mingw64\bin\
+Version: 2.7.3+5fa7116896c82164996a609accd1c5ad90fe730a
+
+------------
+Diagnostic: Environment
+Skipped: False
+Success: True
+Exception: None
+Log:
+OSType: Windows
+OSVersion: 10.0 (build 22631)
+Reading environment variables... OK
+ Variables:
+OneDriveConsumer=C:\Users\wahaj\OneDrive
+GCM_GUI_PROMPT=False
+MSYSTEM=MINGW64
+ProgramW6432=C:\Program Files
+PAGER=more.com
+PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 183 Stepping 1, GenuineIntel
+EFC_5592=1
+ACSetupSvcPort=23210
+TMP=C:\Users\wahaj\AppData\Local\Temp
+CODEX_INTERNAL_ORIGINATOR_OVERRIDE=codex_vscode
+PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.CPL
+COMPUTERNAME=WAHAJSTRIX18
+ProgramData=C:\ProgramData
+RUST_LOG=warn
+VSCODE_CWD=C:\Users\wahaj\AppData\Local\Programs\Microsoft VS Code
+EnableLog=INFO
+PROCESSOR_REVISION=b701
+TEMP=C:\Users\wahaj\AppData\Local\Temp
+USERPROFILE=C:\Users\wahaj
+CommonProgramFiles(x86)=C:\Program Files (x86)\Common Files
+LOGONSERVER=\\WAHAJSTRIX18
+TERM=xterm-256color
+USERNAME=wahaj
+SystemRoot=C:\Windows
+CHROME_CRASHPAD_PIPE_NAME=\\.\pipe\crashpad_19652_HUHGRNGARKCJZCKD
+CODEX_THREAD_ID=019d5084-0025-7880-9648-476bc1b40eab
+PLINK_PROTOCOL=ssh
+LESS=
+OneDrive=C:\Users\wahaj\OneDrive
+PATH=C:/Program Files/Git/mingw64/libexec/git-core;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\Users\wahaj\bin;C:\Users\wahaj\.codex\tmp\arg0\codex-arg09MU6tO;C:\Users\wahaj\AppData\Local\Programs\Microsoft VS Code;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA Corporation\NVIDIA NvDLISR;C:\Program Files\dotnet\;C:\Program Files\Microsoft SQL Server\150\Tools\Binn\;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\;C:\Program Files\nodejs\;C:\Program Files\Git\cmd;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA Corporation\NVIDIA NvDLISR;C:\Program Files\dotnet\;C:\Program Files\Microsoft SQL Server\150\Tools\Binn\;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\;C:\Program Files\nodejs\;C:\Program Files\Git\cmd;C:\Users\wahaj\AppData\Local\Microsoft\PowerAppsCLI\;C:\Users\wahaj\AppData\Local\Microsoft\WindowsApps;C:\Users\wahaj\.dotnet\tools;C:\Users\wahaj\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\wahaj\AppData\Roaming\npm;c:\Users\wahaj\.vscode\extensions\openai.chatgpt-26.325.31654-win32-x64\bin\windows-x86_64;c:\Users\wahaj\.vscode\extensions\openai.chatgpt-26.325.31654-win32-x64\bin\windows-x86_64
+CommonProgramFiles=C:\Program Files\Common Files
+windir=C:\Windows
+ZES_ENABLE_SYSMAN=1
+PROCESSOR_LEVEL=6
+GIT_CONFIG_KEY_0=safe.directory
+LC_CTYPE=C.UTF-8
+RlsSvcPort=22112
+HOMEPATH=\Users\wahaj
+IGCCSVC_DB=AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAAluhzEVuAV0OitqU3fyIgtAQAAAACAAAAAAAQZgAAAAEAACAAAACYIaaXVSfzDSfZnC7CZg52Hu42kQImwshP8UFIltHncgAAAAAOgAAAAAIAACAAAAD5gvhi8UNW4a0J2HDVoQObIaU5F+PZ+EbjfxAGG+zVC2AAAACMz4mfn5KF/lS/17nHHGnibl97oRYKbqI4ZJxo64o2DbTSBU+azW/c5Bl72DkBSbM3Hwcj50iZdGnRUo8Djkj5XAaWc4KSScSHC8GPnPgO4E3m3Ca0plP+koMz0GHJ7IJAAAAAViSRWF5/mbcL6PZ1gf+oPa6CMoBH7wAFjJ55+Uw0O9JlotCreiw8PzWRe86FzLG+wdYptGXcO55ZR2q+3aSpBQ==
+GIT_CONFIG_VALUE_0=C:\Wahaj\Work\Tech\apps\accordin
+VSCODE_NLS_CONFIG={"userLocale":"en-us","osLocale":"en-ae","resolvedLanguage":"en","defaultMessagesFile":"C:\\Users\\wahaj\\AppData\\Local\\Programs\\Microsoft VS Code\\e7fb5e96c0\\resources\\app\\out\\nls.messages.json","locale":"en-us","availableLanguages":{}}
+VSCODE_HANDLES_UNCAUGHT_ERRORS=true
+ALLUSERSPROFILE=C:\ProgramData
+CommonProgramW6432=C:\Program Files\Common Files
+VSCODE_ESM_ENTRYPOINT=vs/workbench/api/node/extensionHostProcess
+ProgramFiles(x86)=C:\Program Files (x86)
+GIT_EXEC_PATH=C:/Program Files/Git/mingw64/libexec/git-core
+PROCESSOR_ARCHITECTURE=AMD64
+SESSIONNAME=Console
+GIT_CONFIG_COUNT=1
+DriverData=C:\Windows\System32\Drivers\DriverData
+HOMEDRIVE=C:
+VSCODE_PID=19652
+VSCODE_CRASH_REPORTER_PROCESS_TYPE=extensionHost
+GIT_TRACE2_PARENT_SID=184404e5-b7cd-4ce8-9767-84aea882adca
+SystemDrive=C:
+NUMBER_OF_PROCESSORS=32
+OS=Windows_NT
+ProgramFiles=C:\Program Files
+ComSpec=C:\Windows\system32\cmd.exe
+USERDOMAIN_ROAMINGPROFILE=WAHAJSTRIX18
+HOME=C:\Users\wahaj
+VSCODE_IPC_HOOK=\\.\pipe\1d4dec98-1.114.0-main-sock
+CODEX_SANDBOX_NETWORK_DISABLED=1
+ELECTRON_RUN_AS_NODE=1
+PSModulePath=C:\Users\wahaj\Documents\WindowsPowerShell\Modules;C:\Program Files\WindowsPowerShell\Modules;C:\Windows\system32\WindowsPowerShell\v1.0\Modules
+TMPDIR=C:\Users\wahaj\AppData\Local\Temp
+APPDATA=C:\Users\wahaj\AppData\Roaming
+USERDOMAIN=WAHAJSTRIX18
+ACSvcPort=17532
+LOCALAPPDATA=C:\Users\wahaj\AppData\Local
+DEBUG=release
+GIT_PAGER=more.com
+COLORTERM=truecolor
+VSCODE_CODE_CACHE_PATH=C:\Users\wahaj\AppData\Roaming\Code\CachedData\e7fb5e96c0730b9deb70b33781f98e2f35975036
+PUBLIC=C:\Users\Public
+
+
+------------
+Diagnostic: File system
+Skipped: False
+Success: True
+Exception: None
+Log:
+Temporary directory is 'C:\Users\wahaj\AppData\Local\Temp\'...
+Checking basic file I/O...
+Writing to temporary file 'C:\Users\wahaj\AppData\Local\Temp\7aab467780d6c86094bce394'... OK
+Reading from temporary file 'C:\Users\wahaj\AppData\Local\Temp\7aab467780d6c86094bce394'... OK
+Deleting temporary file 'C:\Users\wahaj\AppData\Local\Temp\7aab467780d6c86094bce394'... OK
+Testing IFileSystem instance...
+UserHomePath: C:\Users\CodexSandboxOffline
+UserDataDirectoryPath: C:\Users\CodexSandboxOffline\.gcm
+GetCurrentDirectory(): C:\Wahaj\Work\Tech\apps\accordin
+
+------------
+Diagnostic: Networking
+Skipped: False
+Success: False
+Exception:
+System.Net.Http.HttpRequestException: An error occurred while sending the request. ---> System.Net.WebException: The underlying connection was closed: An unexpected error occurred on a receive. ---> System.ComponentModel.Win32Exception: No credentials are available in the security package
+   at System.Net.SSPIWrapper.AcquireCredentialsHandle(SSPIInterface SecModule, String package, CredentialUse intent, SecureCredential2 scc)
+   at System.Net.Security.SecureChannel.AcquireCredentialsHandle(CredentialUse credUsage, SecureCredential2& secureCredential)
+   at System.Net.Security.SecureChannel.AcquireCredentialsHandle(CredentialUse credUsage, X509Certificate2 selectedCert, Flags flags)
+   at System.Net.Security.SecureChannel.AcquireClientCredentials(Byte[]& thumbPrint)
+   at System.Net.Security.SecureChannel.GenerateToken(Byte[] input, Int32 offset, Int32 count, Byte[]& output)
+   at System.Net.Security.SecureChannel.NextMessage(Byte[] incoming, Int32 offset, Int32 count)
+   at System.Net.Security.SslState.StartSendBlob(Byte[] incoming, Int32 count, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   at System.Net.Security.SslState.ForceAuthentication(Boolean receiveFirst, Byte[] buffer, AsyncProtocolRequest asyncRequest, Boolean renegotiation)
+   at System.Net.Security.SslState.ProcessAuthentication(LazyAsyncResult lazyResult)
+   at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   at System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)
+   at System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)
+   at System.Net.TlsStream.ProcessAuthentication(LazyAsyncResult result)
+   at System.Net.TlsStream.BeginWrite(Byte[] buffer, Int32 offset, Int32 size, AsyncCallback asyncCallback, Object asyncState)
+   at System.Net.ConnectStream.WriteHeaders(Boolean async)
+   --- End of inner exception stack trace ---
+   at System.Net.HttpWebRequest.EndGetResponse(IAsyncResult asyncResult)
+   at System.Net.Http.HttpClientHandler.GetResponseCallback(IAsyncResult ar)
+   --- End of inner exception stack trace ---
+   at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
+   at GitCredentialManager.Diagnostics.NetworkingDiagnostic.<RunInternalAsync>d__4.MoveNext()
+--- End of stack trace from previous location where exception was thrown ---
+   at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
+   at GitCredentialManager.Diagnostics.Diagnostic.<RunAsync>d__6.MoveNext()
+Log:
+Checking networking and HTTP stack...
+Creating HTTP client... OK
+IsNetworkAvailable: True
+Sending HEAD request to http://example.com...Sending HEAD request to https://example.com... OK
+
+------------
+Diagnostic: Git
+Skipped: False
+Success: True
+Exception: None
+Log:
+Getting Git version... OK
+Git version is '2.53.0.windows.2'
+Locating current repository...Git repository at 'C:/Wahaj/Work/Tech/apps/accordin/.git'
+ OK
+Listing all Git configuration... OK
+Git configuration:
+file:C:/Program Files/Git/etc/gitconfig	diff.astextplain.textconv=astextplain
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.clean=git-lfs clean -- %f
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.smudge=git-lfs smudge -- %f
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.process=git-lfs filter-process
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.required=true
+file:C:/Program Files/Git/etc/gitconfig	http.sslbackend=schannel
+file:C:/Program Files/Git/etc/gitconfig	core.autocrlf=true
+file:C:/Program Files/Git/etc/gitconfig	core.fscache=true
+file:C:/Program Files/Git/etc/gitconfig	core.symlinks=false
+file:C:/Program Files/Git/etc/gitconfig	pull.rebase=false
+file:C:/Program Files/Git/etc/gitconfig	credential.helper=manager
+file:C:/Program Files/Git/etc/gitconfig	credential.https://dev.azure.com.usehttppath=true
+file:C:/Program Files/Git/etc/gitconfig	init.defaultbranch=master
+file:C:/Users/wahaj/.gitconfig	core.editor="C:\Users\wahaj\AppData\Local\Programs\Microsoft VS Code\bin\code" --wait
+file:C:/Users/wahaj/.gitconfig	user.name=Wahaj Rashid
+file:C:/Users/wahaj/.gitconfig	user.email=wahaj.rashid@live.com
+file:.git/config	core.repositoryformatversion=0
+file:.git/config	core.filemode=false
+file:.git/config	core.bare=false
+file:.git/config	core.logallrefupdates=true
+file:.git/config	core.symlinks=false
+file:.git/config	core.ignorecase=true
+file:.git/config	remote.origin.url=https://github.com/thewahaj/accordin.git
+file:.git/config	remote.origin.fetch=+refs/heads/*:refs/remotes/origin/*
+file:.git/config	branch.main.remote=origin
+file:.git/config	branch.main.merge=refs/heads/main
+file:.git/config	branch.main.vscode-merge-base=origin/main
+command line:	safe.directory=C:\Wahaj\Work\Tech\apps\accordin
+
+
+------------
+Diagnostic: Credential storage
+Skipped: False
+Success: True
+Exception: None
+Log:
+ICredentialStore instance is of type: CredentialStore
+Writing test credential... OK
+Reading test credential... OK
+Deleting test credential... OK
+
