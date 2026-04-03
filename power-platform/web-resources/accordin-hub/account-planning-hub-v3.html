@@ -898,7 +898,6 @@ function enrichPlanWithInsightRefs(plan) {
 }
 
 function renderPlan(plan,acc,options={}){
-  const preserveChat=!!options.preserveChat;
   plan=enrichPlanWithInsightRefs(plan); // infer insightRef for real plans that lack them
   currentPlan=plan;
   refreshApproveButton();
@@ -951,17 +950,19 @@ function renderPlan(plan,acc,options={}){
   document.querySelectorAll('.p-mid-tab')[0].classList.add('on');
   renderPlanTab(plan);
 
-  // Open copilot with proactive message
-  copilotOpen=true;applyCollapseState();
-  if(preserveChat&&chatHistory.length){
-    const status=document.getElementById('chatStatus');
-    const sub=document.getElementById('chatSub');
-    if(status)status.classList.remove('pulse');
-    if(sub)sub.textContent='Refine this plan';
-    renderChatHistory();
-  }else{
-    setCopilotState('ready',acc?.name,plan);
+  // Always open the copilot when a plan loads so the reasoning trace is visible
+  copilotOpen=true;
+  const copilotEl=document.getElementById('copilotPanel');
+  const collapseBtn=document.getElementById('collapseBtn');
+  if(copilotEl){
+    copilotEl.classList.remove('collapsed');
+    copilotEl.classList.add('user-open');
   }
+  if(collapseBtn)collapseBtn.textContent='›';
+
+  // Always call setCopilotState('ready') so generation messages are cleaned up.
+  // It adds the reasoning trace only when no real conversation exists.
+  setCopilotState('ready',acc?.name||currentAccount?.name,plan);
   generateQuickPrompts(plan);
   setTimeout(triggerStaggeredReveal,50);
 }
@@ -1263,12 +1264,14 @@ function setCopilotState(state, accountName, plan){
     chatHistory.push({
       role:'ai',
       text:'Analysing account data from Dataverse — reading opportunities, contacts, signals and activities. This takes 15–30 seconds.',
-      time:'Just now'
+      time:'Just now',
+      generated:true
     });
     if(status)status.classList.add('pulse');
     if(sub)sub.textContent='Generating plan...';
     document.getElementById('qPrompts').innerHTML='';
   } else if(state==='ready'&&plan){
+    chatHistory=chatHistory.filter(m=>!m.generated);
     if(chatHistory.length===0){
       const trace = buildReasoningTrace(plan, accountName);
       chatHistory.push({ role: 'ai', text: trace, time: 'Just now' });
@@ -1555,7 +1558,7 @@ function toggleCopilot(){
 function applyCollapseState(){
   const panel=document.getElementById('copilotPanel');
   const btn=document.getElementById('collapseBtn');
-  const isOpen=copilotOpen||(window.innerWidth>1200&&!panel.classList.contains('collapsed'));
+  if(!panel)return;
   if(copilotOpen){
     panel.classList.remove('collapsed');panel.classList.add('user-open');
     if(btn)btn.textContent='›'; // pointing right = will collapse to right
