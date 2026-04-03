@@ -156,8 +156,20 @@ body{font-family:var(--font);background:var(--surface);color:var(--text);font-si
 /* Insight highlight pulse — triggered by rationale scroll-to */
 .insight-highlight{border-radius:var(--r);animation:insightPulse .8s ease 2;outline:2px solid var(--blue)}
 @keyframes insightPulse{0%,100%{background:transparent}50%{background:var(--blue-pale)}}
+/* Bidirectional — plan card highlight when signal is clicked from left panel */
+@keyframes cardPulse {
+  0%, 100% { box-shadow: var(--xs); }
+  30%       { box-shadow: 0 0 0 2px var(--blue), var(--sm); border-color: var(--blue-lt); }
+  70%       { box-shadow: 0 0 0 2px var(--blue), var(--sm); border-color: var(--blue-lt); }
+}
+.card-highlight {
+  animation: cardPulse 1.2s ease 2;
+}
 .wo-item{background:var(--red-pale);border-left:2px solid var(--red);padding:7px 9px;border-radius:0 3px 3px 0;margin-bottom:5px;font-size:11px;color:#991b1b;line-height:1.5;transition:outline .1s}
 .wo-item.insight-highlight{outline:2px solid var(--red)}
+.sig-item:hover .sig-text { color: var(--blue); }
+.sig-item:hover .sig-dot  { background: var(--blue); }
+.wo-item:hover { border-left-color: #991b1b; background: #fee2e2; cursor: pointer; }
 .lim-item{display:flex;gap:6px;margin-bottom:4px;font-size:11px;color:var(--text-muted);line-height:1.5;align-items:flex-start}
 .lim-collapsed{display:none}
 
@@ -939,8 +951,30 @@ function enrichPlanWithInsightRefs(plan) {
   return plan;
 }
 
+// Maps insightRef values to the card element IDs that reference them
+// Built once when the plan renders, used by left-panel click handlers
+let insightToCards = {}; // e.g. { "watchout:0": ["pop-rec-0", "pop-cad-2"] }
+
+function buildInsightIndex(plan) {
+  insightToCards = {};
+
+  function index(items, prefix) {
+    (items || []).forEach((item, i) => {
+      if (!item.insightRef) return;
+      const ref = item.insightRef;
+      if (!insightToCards[ref]) insightToCards[ref] = [];
+      insightToCards[ref].push(`pop-${prefix}-${i}`);
+    });
+  }
+
+  index(plan.recommendations, 'rec');
+  index(plan.cadences, 'cad');
+  index(plan.oneOffActions, 'act');
+}
+
 function renderPlan(plan,acc,options={}){
   plan=enrichPlanWithInsightRefs(plan); // infer insightRef for real plans that lack them
+  buildInsightIndex(plan);
   currentPlan=plan;
   refreshApproveButton();
   const ini=n=>n?n.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase():'?';
@@ -974,10 +1008,15 @@ function renderPlan(plan,acc,options={}){
   document.getElementById('fcText').textContent=plan.forecastNarrative||'—';
 
   // Signals — assign IDs for scroll-to
-  document.getElementById('posSigs').innerHTML=(plan.positiveSignals||[]).map((s,i)=>`<div class="sig-item" id="signal-${i}"><div class="sig-dot"></div><div class="sig-text">${s}</div></div>`).join('');
+  document.getElementById('posSigs').innerHTML=(plan.positiveSignals||[]).map((s,i)=>`<div class="sig-item" id="signal-${i}" onclick="highlightLinkedCards('signal:${i}')"
+        style="cursor:pointer" title="Click to highlight linked plan items">
+    <div class="sig-dot"></div>
+    <div class="sig-text">${s}</div>
+  </div>`).join('');
 
   // Watchouts — assign IDs for scroll-to
-  document.getElementById('watchouts').innerHTML=(plan.watchouts||[]).map((w,i)=>`<div class="wo-item" id="watchout-${i}">${w}</div>`).join('');
+  document.getElementById('watchouts').innerHTML=(plan.watchouts||[]).map((w,i)=>`<div class="wo-item" id="watchout-${i}" onclick="highlightLinkedCards('watchout:${i}')"
+        title="Click to highlight linked plan items">${w}</div>`).join('');
 
   // Data limitations
   document.getElementById('dataLims').innerHTML=(plan.dataLimitations||[]).map(l=>`<div class="lim-item"><span style="flex-shrink:0;margin-top:1px">ℹ</span>${l}</div>`).join('');
@@ -1288,6 +1327,48 @@ function scrollToInsight(ref, popId){
       setTimeout(()=>target.classList.remove('insight-highlight'), 2000);
     }, window.innerWidth<=900 ? 300 : 50);
   }
+}
+
+function highlightLinkedCards(insightRef) {
+  // First highlight the source signal/watchout itself
+  const sourceId = insightRef.startsWith('watchout:')
+    ? `watchout-${insightRef.split(':')[1]}`
+    : insightRef.startsWith('signal:')
+      ? `signal-${insightRef.split(':')[1]}`
+      : null;
+
+  if (sourceId) {
+    const sourceEl = document.getElementById(sourceId);
+    if (sourceEl) {
+      sourceEl.classList.remove('insight-highlight');
+      void sourceEl.offsetWidth;
+      sourceEl.classList.add('insight-highlight');
+      setTimeout(() => sourceEl.classList.remove('insight-highlight'), 2000);
+    }
+  }
+
+  // Find all plan cards linked to this insight
+  const cardIds = insightToCards[insightRef] || [];
+  if (cardIds.length === 0) return;
+
+  // Scroll the middle panel to the first linked card
+  const firstCardId = cardIds[0].replace('pop-', '');
+  const firstCard = document.getElementById(firstCardId);
+  if (firstCard) {
+    firstCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // Highlight all linked cards
+  cardIds.forEach(popId => {
+    const cardId = popId.replace('pop-', '');
+    const card = document.getElementById(cardId);
+    if (card) {
+      card.classList.remove('card-highlight');
+      void card.offsetWidth;
+      card.classList.add('card-highlight');
+      setTimeout(() => card.classList.remove('card-highlight'), 2500);
+    }
+  });
 }
 
 // Close popovers when clicking elsewhere
