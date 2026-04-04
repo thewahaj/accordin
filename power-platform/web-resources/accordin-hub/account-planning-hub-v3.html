@@ -732,10 +732,24 @@ async function init(){
 function transformD365Data({entities,planMap}){
   return entities.map(acc=>{
     const p=planMap[acc.accountid]||{};
-    return{id:p.wrl_accountplanid||acc.accountid,accountId:acc.accountid,name:acc.name||'Unknown',industry:acc['industrycode@OData.Community.Display.V1.FormattedValue']||'—',tier:acc.wrl_accounttier||2,planStatus:mapPlanStatus(p.wrl_planstatus),rag:mapRAG(acc.wrl_ragstatus),attention:{level:mapAttLevel(acc.wrl_ragstatus),text:acc.wrl_requiresattention||'On track'},progress:acc.wrl_planprogress||0,target:acc.wrl_plantarget||p.wrl_revenuetarget||0,achieved:acc.wrl_actualrevenueytd||p.wrl_actualrevenue||0,lastUpdated:p.modifiedon?new Date(p.modifiedon).toLocaleDateString('en-GB'):'—',planPayload:p.wrl_planpayload?JSON.parse(p.wrl_planpayload):null,rawPlan:p};
+    return{id:acc.accountid,accountId:acc.accountid,name:acc.name||'Unknown',industry:acc['industrycode@OData.Community.Display.V1.FormattedValue']||'—',tier:acc.wrl_accounttier||2,planStatus:mapPlanStatus(p.wrl_planstatus),rag:mapRAG(acc.wrl_ragstatus),attention:{level:mapAttLevel(acc.wrl_ragstatus),text:acc.wrl_requiresattention||'On track'},progress:acc.wrl_planprogress||0,target:acc.wrl_plantarget||p.wrl_revenuetarget||0,achieved:acc.wrl_actualrevenueytd||p.wrl_actualrevenue||0,lastUpdated:p.modifiedon?new Date(p.modifiedon).toLocaleDateString('en-GB'):'—',planPayload:p.wrl_planpayload?JSON.parse(p.wrl_planpayload):null,rawPlan:p};
   });
 }
-function mapPlanStatus(v){return{0:'draft',1:'active',2:'closed'}[v]||'none'}
+function mapPlanStatus(v){
+  const status=Number(v);
+  if(status===1||status===3)return'active';
+  if(status===0||status===2)return'draft';
+  if(status===4)return'closed';
+  return'none';
+}
+function isApprovedPlanStatus(v){const status=Number(v);return status===1||status===3}
+function getPlanPickerMeta(v){
+  const status=Number(v);
+  if(status===1||status===3)return{label:'Approved',cls:'st-active',cardCls:'plan-card-active'};
+  if(status===2)return{label:'Pending Approval',cls:'st-draft',cardCls:'plan-card-draft'};
+  if(status===4)return{label:'Archived',cls:'st-none',cardCls:''};
+  return{label:'Draft',cls:'st-draft',cardCls:'plan-card-draft'};
+}
 function mapRAG(v){return{1:'green',2:'amber',3:'red'}[v]||'amber'}
 function mapAttLevel(v){return{1:'none',2:'amber',3:'red'}[v]||'amber'}
 
@@ -804,7 +818,7 @@ function sortAccounts(v){
 // PANEL OPEN / CLOSE
 // ═══════════════════════════════════════════════════════════════
 async function openAccount(id){
-  const acc=allAccounts.find(a=>a.id===id)||allAccounts[0];
+  const acc=allAccounts.find(a=>a.id===id||a.accountId===id)||allAccounts[0];
   chatHistory=[];
   currentAccount=acc;currentAccountId=acc.accountId||acc.id;currentPlanId=null;currentPlanMode='existing';
   document.getElementById('pAccName').textContent=acc.name;
@@ -871,7 +885,7 @@ async function openPlanFromRecord(planRecord,acc){
   currentPlanMode='existing';
   if(acc){
     acc.rawPlan={...(acc.rawPlan||{}),...planRecord};
-    acc.planStatus=planRecord.wrl_planstatus===3?'active':planRecord.wrl_planstatus===1?'draft':acc.planStatus;
+    acc.planStatus=mapPlanStatus(planRecord.wrl_planstatus);
   }
   setBackLink(accountPlans.length>1);
   setActionButtons(true);
@@ -905,15 +919,13 @@ function renderPlanPicker(plans,acc){
   document.getElementById('contactStripWrap').style.display='none';
   document.getElementById('pMidTabs').style.display='none';
   document.getElementById('pLeft').style.display='none';
-  const statusLabel={1:'Draft',2:'Pending Approval',3:'Active',4:'Archived'};
-  const statusCls={1:'st-draft',2:'st-draft',3:'st-active',4:'st-none'};
-  const cardCls={1:'plan-card-draft',3:'plan-card-active'};
   const intentLabel={'cross-sell':'Cross-sell',upsell:'Upsell',retention:'Retention',relationship:'Relationship'};
   document.getElementById('pMid').innerHTML=`
     <div class="plan-picker">
       <div class="plan-picker-hdr">${plans.length} plans for ${acc.name}</div>
       ${plans.map((p,i)=>{
         const status=p.wrl_planstatus||1;
+        const pickerMeta=getPlanPickerMeta(status);
         const intent=(p.wrl_planintent||'').toLowerCase();
         const dateStr=p.wrl_confirmationtimestamp
           ?`Approved ${new Date(p.wrl_confirmationtimestamp).toLocaleDateString('en-GB')}`
@@ -921,12 +933,12 @@ function renderPlanPicker(plans,acc){
             ?`Generated ${new Date(p.wrl_generatedtimestamp).toLocaleDateString('en-GB')}`
             :'Date unknown';
         return `
-          <div class="plan-card ${cardCls[status]||'plan-card-draft'}" onclick="openPlanFromRecord(window._pickerPlans[${i}], currentAccount)">
+          <div class="plan-card ${pickerMeta.cardCls}" onclick="openPlanFromRecord(window._pickerPlans[${i}], currentAccount)">
             <div class="plan-card-top">
               <div>
                 <div class="plan-card-name">${p.wrl_planname||'Unnamed Plan'}</div>
                 <div class="plan-card-meta">
-                  <span class="plan-st ${statusCls[status]||'st-none'}">${statusLabel[status]||'Draft'}</span>
+                  <span class="plan-st ${pickerMeta.cls}">${pickerMeta.label}</span>
                   ${intent?`<span class="tier t2" style="font-family:var(--font);font-size:10px">${intentLabel[intent]||intent}</span>`:''}
                 </div>
               </div>
@@ -981,7 +993,7 @@ function switchMidTab(tab,el){
   else if(tab==='contacts')renderContactsTab(currentPlan);
 }
 function isPlanApproved(){
-  return currentAccount?.planStatus==='active' || currentAccount?.rawPlan?.wrl_planstatus===1 || currentAccount?.rawPlan?.wrl_planstatus===3;
+  return currentAccount?.planStatus==='active' || isApprovedPlanStatus(currentAccount?.rawPlan?.wrl_planstatus);
 }
 function refreshApproveButton(){
   const btn=document.getElementById('approveBtn');
