@@ -102,12 +102,16 @@ body{font-family:var(--font);background:var(--surface);color:var(--text);font-si
 .p-hdr{background:var(--navy);padding:0 16px;height:52px;display:flex;align-items:center;gap:12px;flex-shrink:0;border-bottom:1px solid var(--navy-bd)}
 .p-close{width:28px;height:28px;border-radius:5px;border:1px solid var(--navy-bd);background:transparent;color:var(--slate-lt);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .15s;flex-shrink:0}
 .p-close:hover{background:var(--navy-light);color:white}
+.p-close{order:1}
+.back-to-plans{order:2}
+.sit-toggle{order:3}
+.p-hdr>div:first-of-type{order:4}
 .p-acc-name{font-size:14px;font-weight:600;color:white;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
 .p-acc-meta{font-size:11px;color:var(--slate-lt);white-space:nowrap}
-.p-tabs{display:flex;gap:1px;margin-left:8px;flex-shrink:0}
+.p-tabs{display:flex;gap:1px;margin-left:8px;flex-shrink:0;order:5}
 .p-tab{padding:5px 11px;border-radius:var(--r);font-size:12px;font-weight:500;cursor:pointer;color:var(--slate-lt);border:none;background:transparent;transition:all .15s;font-family:var(--font);white-space:nowrap}
 .p-tab.on{background:var(--navy-light);color:white}.p-tab:hover{color:white}
-.p-hdr-right{margin-left:auto;display:flex;gap:6px;align-items:center;flex-shrink:0}
+.p-hdr-right{margin-left:auto;display:flex;gap:6px;align-items:center;flex-shrink:0;white-space:nowrap;order:6}
 .sit-toggle{display:none;align-items:center;gap:5px;padding:5px 9px;border-radius:var(--r);font-size:11px;color:var(--slate-lt);border:1px solid var(--navy-bd);background:transparent;cursor:pointer;font-family:var(--font);white-space:nowrap;transition:all .15s;flex-shrink:0}
 .sit-toggle:hover{background:var(--navy-light);color:white}
 
@@ -331,8 +335,8 @@ body{font-family:var(--font);background:var(--surface);color:var(--text);font-si
 .msg.user .msg-bubble{background:var(--blue);color:white;border-bottom-right-radius:2px}
 .msg.ai .msg-bubble{background:var(--navy-light);color:var(--off-white);border-bottom-left-radius:2px;border:1px solid var(--navy-bd)}
 .msg-time{font-size:10px;color:var(--slate-lt)}
-.q-prompts{padding:8px 12px;border-top:1px solid var(--navy-bd);display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0}
-.q-btn{font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid var(--navy-bd);color:var(--slate-lt);cursor:pointer;transition:all .15s;background:transparent;font-family:var(--font);white-space:nowrap}
+.q-prompts{padding:8px 12px;border-top:1px solid var(--navy-bd);display:flex;flex-direction:column;gap:5px;overflow-x:hidden;flex-shrink:0}
+.q-btn{font-size:10px;padding:6px 8px;border-radius:12px;border:1px solid var(--navy-bd);color:var(--slate-lt);cursor:pointer;transition:all .15s;background:transparent;font-family:var(--font);white-space:normal;text-align:left;width:100%}
 .q-btn:hover{background:var(--navy-light);color:white;border-color:var(--navy-light)}
 .chat-inp-area{padding:10px 12px;border-top:1px solid var(--navy-bd);flex-shrink:0}
 .chat-inp-wrap{display:flex;gap:7px;align-items:flex-end;background:var(--navy-light);border:1px solid var(--navy-bd);border-radius:9px;padding:7px 9px;transition:border-color .15s}
@@ -351,6 +355,25 @@ body{font-family:var(--font);background:var(--surface);color:var(--text);font-si
 .intent-opt{border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 15px;cursor:pointer;text-align:left;background:white;display:flex;gap:11px;align-items:center;transition:all .15s}
 .intent-opt:hover,.intent-opt.on{border-color:var(--blue);background:var(--blue-pale)}
 .intent-emoji{font-size:18px}.intent-lbl{font-size:13px;font-weight:600;color:var(--text)}.intent-desc{font-size:11px;color:var(--text-muted)}
+.plan-picker{padding:20px 18px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1}
+.plan-picker-hdr{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:4px}
+.plan-card{background:white;border:1px solid var(--border);border-radius:var(--r-lg);padding:15px 16px;cursor:pointer;transition:border-color .15s,box-shadow .15s;display:flex;flex-direction:column;gap:8px}
+.plan-card:hover{border-color:var(--blue-lt);box-shadow:var(--sm)}
+.plan-card.plan-card-active{border-left:3px solid var(--green)}
+.plan-card.plan-card-draft{border-left:3px solid var(--amber)}
+.plan-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.plan-card-name{font-size:13px;font-weight:600;color:var(--text);line-height:1.3}
+.plan-card-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:2px}
+.plan-card-stat{font-size:11px;color:var(--text-muted)}
+.plan-card-stat strong{color:var(--text-mid);font-weight:600}
+.plan-card-val{font-size:16px;font-weight:700;font-family:var(--mono);color:var(--blue)}
+.plan-card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:4px;gap:10px}
+.plan-card-date{font-size:10px;color:var(--text-muted);font-family:var(--mono)}
+.open-plan-btn{font-size:11px;font-weight:600;color:var(--blue);background:var(--blue-pale);border:1px solid #bfdbfe;border-radius:var(--r);padding:4px 10px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.open-plan-btn:hover{background:var(--blue);color:white;border-color:var(--blue)}
+.back-to-plans{display:none;align-items:center;gap:5px;font-size:11px;font-weight:500;color:var(--slate-lt);cursor:pointer;padding:4px 8px;border-radius:var(--r);border:1px solid var(--navy-bd);background:transparent;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.back-to-plans:hover{background:var(--navy-light);color:white}
+.back-to-plans.visible{display:inline-flex}
 .spin{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
 /* Icon-driven generation loading */
 .gen-stage {
@@ -510,6 +533,7 @@ body{font-family:var(--font);background:var(--surface);color:var(--text);font-si
 <!-- PLAN PANEL -->
 <div class="panel" id="panel">
   <div class="p-hdr">
+    <button class="back-to-plans" id="backToPlans" onclick="backToPicker()">&#8592; Plans</button>
     <button class="p-close" onclick="closePanel()">✕</button>
     <button class="sit-toggle" onclick="toggleSituation()">≡ Situation</button>
     <div><div class="p-acc-name" id="pAccName">—</div><div class="p-acc-meta" id="pAccMeta">—</div></div>
@@ -611,6 +635,15 @@ const API = {
     return{entities:accounts.entities||[],planMap:pm};
   },
   async getCadences(id){return API.get('wrl_engagementcadence',`?$select=wrl_engagementcadenceid,wrl_cadencename,wrl_contactname,wrl_frequency,wrl_communicationchannel,wrl_purpose,wrl_rationale,wrl_locationawareness,wrl_status&$filter=_wrl_accountplan_value eq '${id}'`)},
+  async getAccountPlans(accountId){
+    return API.get('wrl_accountplan',
+      `?$select=wrl_accountplanid,wrl_planname,wrl_planstatus,wrl_plantype,`+
+      `wrl_planintent,wrl_revenuetarget,wrl_planpayload,`+
+      `wrl_generatedtimestamp,wrl_confirmationtimestamp,modifiedon`+
+      `&$filter=_wrl_account_value eq '${accountId}'`+
+      `&$orderby=modifiedon desc`
+    );
+  },
   async getActions(id){return API.get('wrl_actionplan',`?$select=wrl_actionplanid,wrl_actiondescription,wrl_prioritylevel,wrl_communicationchannel,wrl_suggestedtiming,wrl_rationale,wrl_currentstatus&$filter=_wrl_accountplan_value eq '${id}'`)},
   async getRecommendations(id){return API.get('wrl_planrecommendation',`?$select=wrl_planrecommendationid,wrl_productname,wrl_recommendationtype,wrl_description,wrl_rationale,wrl_estimatedvalue,wrl_confidence,wrl_confidencereason,wrl_sortorder&$filter=_wrl_accountplan_value eq '${id}'&$orderby=wrl_sortorder asc`)},
   async saveMessage(pid,content,role,seq){await API.post('wrl_conversationmessage',{wrl_messagecontent:content,wrl_userrole:role==='user'?0:1,wrl_messagetimestamp:new Date().toISOString(),wrl_messagesequence:seq,'wrl_AccountPlan@odata.bind':`/wrl_accountplans(${pid})`})}
@@ -679,6 +712,7 @@ let allAccounts=[],currentFilter='all',currentSearch='',msgCount=1;
 let currentPlanId=null,currentAccountId=null,currentAccount=null;
 let currentPlanMode='new',copilotOpen=false,currentPlan=null;
 let currentIntentType='cross-sell',currentIntentDesc='Expand into new products or services';
+let accountPlans=[]; // all plans for the current account, loaded when panel opens
 let chatHistory=[]; // persists across renderPlan() calls for the current session
 let chatBusy=false;
 
@@ -772,26 +806,144 @@ function sortAccounts(v){
 async function openAccount(id){
   const acc=allAccounts.find(a=>a.id===id)||allAccounts[0];
   chatHistory=[];
-  currentAccount=acc;currentAccountId=acc.accountId;currentPlanMode='existing';
+  currentAccount=acc;currentAccountId=acc.accountId||acc.id;currentPlanId=null;currentPlanMode='existing';
   document.getElementById('pAccName').textContent=acc.name;
   document.getElementById('pAccMeta').textContent=`Tier ${acc.tier} · ${acc.industry}`;
   document.getElementById('overlay').classList.add('on');
   document.getElementById('panel').classList.add('on');
-  currentPlanId=acc.rawPlan?.wrl_accountplanid||null;
-  let plan=MOCK_PLAN;
+  setBackLink(false);
+  setActionButtons(false);
   if(API.isD365()){
     try{
-      let payload=acc.planPayload;
-      if(!payload&&currentPlanId){const r=await API.getRecord('wrl_accountplan',currentPlanId,'?$select=wrl_planpayload');if(r?.wrl_planpayload){payload=JSON.parse(r.wrl_planpayload);acc.planPayload=payload;}}
-      if(payload)plan=payload;
-    }catch(e){console.error('[AccordIn] openAccount:',e);}
+      const result=await API.getAccountPlans(currentAccountId);
+      accountPlans=result.entities||[];
+    }catch(e){console.error('[AccordIn] openAccount load error:',e);accountPlans=[];}
+  }else{
+    accountPlans=acc.name==='Apple Global Logistics'
+      ?[
+        {
+          wrl_accountplanid:'MOCK-PLAN-001',
+          wrl_planname:`${acc.name} - Cross-sell Plan - Apr 2026`,
+          wrl_planstatus:3,
+          wrl_plantype:1,
+          wrl_planintent:'cross-sell',
+          wrl_revenuetarget:1761500,
+          wrl_planpayload:JSON.stringify(MOCK_PLAN),
+          wrl_generatedtimestamp:new Date(Date.now()-86400000*3).toISOString(),
+          wrl_confirmationtimestamp:new Date(Date.now()-86400000*2).toISOString(),
+          modifiedon:new Date(Date.now()-86400000*2).toISOString()
+        },
+        {
+          wrl_accountplanid:'MOCK-PLAN-002',
+          wrl_planname:`${acc.name} - Retention Plan - Apr 2026`,
+          wrl_planstatus:1,
+          wrl_plantype:2,
+          wrl_planintent:'retention',
+          wrl_revenuetarget:768000,
+          wrl_planpayload:JSON.stringify(MOCK_PLAN),
+          wrl_generatedtimestamp:new Date(Date.now()-86400000).toISOString(),
+          wrl_confirmationtimestamp:null,
+          modifiedon:new Date(Date.now()-86400000).toISOString()
+        }
+      ]
+      :acc.rawPlan?.wrl_accountplanid||acc.planPayload
+        ?[{
+          wrl_accountplanid:acc.rawPlan?.wrl_accountplanid||`${acc.id}-plan`,
+          wrl_planname:`${acc.name} - Account Plan`,
+          wrl_planstatus:acc.planStatus==='active'?3:1,
+          wrl_plantype:1,
+          wrl_planintent:'cross-sell',
+          wrl_revenuetarget:acc.target||0,
+          wrl_planpayload:JSON.stringify(acc.planPayload||MOCK_PLAN),
+          wrl_generatedtimestamp:new Date().toISOString(),
+          wrl_confirmationtimestamp:acc.planStatus==='active'?new Date().toISOString():null,
+          modifiedon:new Date().toISOString()
+        }]
+        :[];
+  }
+  if(accountPlans.length===1)openPlanFromRecord(accountPlans[0],acc);
+  else if(accountPlans.length===0)openCreatePanel(id);
+  else renderPlanPicker(accountPlans,acc);
+}
+async function openPlanFromRecord(planRecord,acc){
+  const planId=planRecord.wrl_accountplanid;
+  currentPlanId=planId;
+  currentPlanMode='existing';
+  if(acc){
+    acc.rawPlan={...(acc.rawPlan||{}),...planRecord};
+    acc.planStatus=planRecord.wrl_planstatus===3?'active':planRecord.wrl_planstatus===1?'draft':acc.planStatus;
+  }
+  setBackLink(accountPlans.length>1);
+  setActionButtons(true);
+  showCopilot(true);
+  let plan=null;
+  if(API.isD365()){
+    try{
+      if(planRecord.wrl_planpayload){
+        plan=JSON.parse(planRecord.wrl_planpayload);
+      }else{
+        const record=await API.getRecord('wrl_accountplan',planId,'?$select=wrl_planpayload');
+        if(record?.wrl_planpayload)plan=JSON.parse(record.wrl_planpayload);
+      }
+    }catch(e){console.error('[AccordIn] openPlanFromRecord error:',e);}
+  }else{
+    plan=planRecord.wrl_planpayload?JSON.parse(planRecord.wrl_planpayload):MOCK_PLAN;
+  }
+  if(plan&&acc)acc.planPayload=plan;
+  if(!plan){
+    showCopilot(true);
+    setCopilotState('ready',acc?.name,null);
+    addMsg('ai','This plan exists in Dataverse but the payload is empty. Try regenerating it from the + New Plan tab.');
+    return;
   }
   renderPlan(plan,acc);
+}
+function renderPlanPicker(plans,acc){
+  window._pickerPlans={};
+  plans.forEach((p,i)=>{window._pickerPlans[i]=p;});
+  showCopilot(false);
+  document.getElementById('contactStripWrap').style.display='none';
+  document.getElementById('pMidTabs').style.display='none';
+  document.getElementById('pLeft').style.display='none';
+  const statusLabel={1:'Draft',2:'Pending Approval',3:'Active',4:'Archived'};
+  const statusCls={1:'st-draft',2:'st-draft',3:'st-active',4:'st-none'};
+  const cardCls={1:'plan-card-draft',3:'plan-card-active'};
+  const intentLabel={'cross-sell':'Cross-sell',upsell:'Upsell',retention:'Retention',relationship:'Relationship'};
+  document.getElementById('pMid').innerHTML=`
+    <div class="plan-picker">
+      <div class="plan-picker-hdr">${plans.length} plans for ${acc.name}</div>
+      ${plans.map((p,i)=>{
+        const status=p.wrl_planstatus||1;
+        const intent=(p.wrl_planintent||'').toLowerCase();
+        const dateStr=p.wrl_confirmationtimestamp
+          ?`Approved ${new Date(p.wrl_confirmationtimestamp).toLocaleDateString('en-GB')}`
+          :p.wrl_generatedtimestamp
+            ?`Generated ${new Date(p.wrl_generatedtimestamp).toLocaleDateString('en-GB')}`
+            :'Date unknown';
+        return `
+          <div class="plan-card ${cardCls[status]||'plan-card-draft'}" onclick="openPlanFromRecord(window._pickerPlans[${i}], currentAccount)">
+            <div class="plan-card-top">
+              <div>
+                <div class="plan-card-name">${p.wrl_planname||'Unnamed Plan'}</div>
+                <div class="plan-card-meta">
+                  <span class="plan-st ${statusCls[status]||'st-none'}">${statusLabel[status]||'Draft'}</span>
+                  ${intent?`<span class="tier t2" style="font-family:var(--font);font-size:10px">${intentLabel[intent]||intent}</span>`:''}
+                </div>
+              </div>
+              <div class="plan-card-val">${fmt(p.wrl_revenuetarget)}</div>
+            </div>
+            <div class="plan-card-footer">
+              <span class="plan-card-date">${dateStr}</span>
+              <button class="open-plan-btn" onclick="event.stopPropagation();openPlanFromRecord(window._pickerPlans[${i}], currentAccount)">Open Plan</button>
+            </div>
+          </div>`;
+      }).join('')}
+    </div>`;
 }
 function openCreatePanel(id){
   const acc=allAccounts.find(a=>a.id===id)||allAccounts[0];
   chatHistory=[];
-  currentAccount=acc;currentAccountId=acc?.accountId||null;currentPlanId=null;currentPlanMode='new';
+  currentAccount=acc;currentAccountId=acc?.accountId||acc?.id||null;currentPlanId=null;currentPlanMode='new';
   document.getElementById('pAccName').textContent=acc?.name||'New Account Plan';
   document.getElementById('pAccMeta').textContent=`Tier ${acc?.tier||1} · ${acc?.industry||'—'}`;
   document.getElementById('overlay').classList.add('on');
@@ -804,7 +956,11 @@ function closePanel(){
   document.getElementById('overlay').classList.remove('on');
   document.getElementById('panel').classList.remove('on');
   closeAllPopovers();
-  chatHistory=[]; // reset for next account
+  chatHistory=[];
+  accountPlans=[];
+  currentPlanId=null;
+  setBackLink(false);
+  setActionButtons(true);
 }
 function switchTab(tab,el){
   document.querySelectorAll('.p-tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');
@@ -825,7 +981,7 @@ function switchMidTab(tab,el){
   else if(tab==='contacts')renderContactsTab(currentPlan);
 }
 function isPlanApproved(){
-  return currentAccount?.planStatus==='active' || currentAccount?.rawPlan?.wrl_planstatus===1;
+  return currentAccount?.planStatus==='active' || currentAccount?.rawPlan?.wrl_planstatus===1 || currentAccount?.rawPlan?.wrl_planstatus===3;
 }
 function refreshApproveButton(){
   const btn=document.getElementById('approveBtn');
@@ -976,6 +1132,7 @@ function renderPlan(plan,acc,options={}){
   plan=enrichPlanWithInsightRefs(plan); // infer insightRef for real plans that lack them
   buildInsightIndex(plan);
   currentPlan=plan;
+  showCopilot(true);
   refreshApproveButton();
   const ini=n=>n?n.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase():'?';
   const isExisting=(currentPlanMode==='existing');
@@ -1056,11 +1213,14 @@ function renderContactStrip(contacts){
   wrap.style.display='block'; // inside p-mid-wrap column flex
   const primary=contacts.find(c=>c.planRole==='primary-relationship');
   const risk=contacts.find(c=>c.planRole==='approval-risk');
-  const recent=[...contacts].sort((a,b)=>(b.lastActivity||'').localeCompare(a.lastActivity||'')).find(c=>c.planRole!=='primary-relationship'&&c.planRole!=='approval-risk');
+  const featuredNames=new Set([primary?.name,risk?.name].filter(Boolean));
+  const recent=[...contacts]
+    .filter(c=>!featuredNames.has(c.name))
+    .sort((a,b)=>(b.lastActivity||'').localeCompare(a.lastActivity||''))[0];
   const featured=[];
   if(primary)featured.push({...primary,stripRole:'primary'});
   if(risk)featured.push({...risk,stripRole:'risk'});
-  if(recent&&!featured.find(f=>f.name===recent.name))featured.push({...recent,stripRole:'active'});
+  if(recent&&!featuredNames.has(recent.name))featured.push({...recent,stripRole:'active'});
   const remaining=contacts.length-featured.length;
   const avColors=['#0e1e35','#b91c1c','#2463eb','#0d9488','#15803d'];
   const roleLbl={primary:'PRIMARY',risk:'RISK',active:'ACTIVE'};
@@ -1127,6 +1287,11 @@ function evidenceCountLabel(r) {
   return `<span class="evidence-count">Backed by ${r.evidenceCount} ${plural}</span>`;
 }
 
+function capitalise(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 function buildPopoverContent(rationale, reasoning, insightRef, popId) {
   const signalsList = reasoning?.signals?.length
     ? `<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">
@@ -1176,7 +1341,7 @@ function renderPlanTab(plan){
             <div class="rec-num">${i+1}</div>
             <div style="flex:1">
               <div class="rec-prod">${r.productName||r.type}</div>
-              <div class="rec-type">${r.type}</div>
+              <div class="rec-type">${capitalise(r.type)}</div>
               <div style="display:flex;gap:5px;align-items:center;margin-top:4px;flex-wrap:wrap">
                 ${reasonTypeBadge(r.reasoning)}
                 ${evidenceCountLabel(r.reasoning)}
@@ -1185,7 +1350,9 @@ function renderPlanTab(plan){
             </div>
             <span class="conf-b ${cc}">${r.confidence}</span>
           </div>
-          <div class="rec-val">${fmt(r.estimatedValue)}</div>
+          ${r.estimatedValue > 0
+            ? `<div class="rec-val">${fmt(r.estimatedValue)}</div>`
+            : `<div class="rec-val" style="color:var(--text-muted);font-size:13px;font-weight:500">Value TBD</div>`}
           <div class="rec-desc">${r.description}</div>
         </div>`;
       }).join('')}
@@ -1463,7 +1630,7 @@ function setCopilotState(state, accountName, plan){
       generated:true
     });
     if(status)status.classList.add('pulse');
-    if(sub)sub.textContent='Generating plan...';
+    if(sub)sub.textContent='Analysing account...';
     document.getElementById('qPrompts').innerHTML='';
   } else if(state==='ready'&&plan){
     chatHistory=chatHistory.filter(m=>!m.generated);
@@ -1475,6 +1642,39 @@ function setCopilotState(state, accountName, plan){
     if(sub)sub.textContent='Refine this plan';
   }
   renderChatHistory();
+}
+function showCopilot(visible){
+  const panel=document.getElementById('copilotPanel');
+  if(!panel)return;
+  if(visible){
+    panel.style.display='';
+    panel.style.visibility='visible';
+    panel.style.pointerEvents='auto';
+    panel.style.opacity='1';
+  }else{
+    panel.style.display='none';
+    panel.style.visibility='hidden';
+    panel.style.pointerEvents='none';
+    panel.style.opacity='0';
+  }
+}
+function setBackLink(visible){
+  const btn=document.getElementById('backToPlans');
+  if(!btn)return;
+  btn.classList.toggle('visible',visible);
+}
+function setActionButtons(visible){
+  const exportBtn=document.querySelector('.p-hdr-right .btn-secondary');
+  const approveBtn=document.querySelector('.p-hdr-right .btn-primary');
+  if(exportBtn)exportBtn.style.display=visible?'':'none';
+  if(approveBtn)approveBtn.style.display=visible?'':'none';
+}
+function backToPicker(){
+  currentPlanId=null;
+  setBackLink(false);
+  setActionButtons(false);
+  chatHistory=[];
+  renderPlanPicker(accountPlans,currentAccount);
 }
 
 function generateQuickPrompts(plan){
@@ -1505,6 +1705,9 @@ function generateQuickPrompts(plan){
 function renderCreateMode(){
   currentIntentType='cross-sell';
   currentIntentDesc='Expand into new products or services';
+  showCopilot(true);
+  setBackLink(false);
+  setActionButtons(false);
   document.getElementById('pLeft').style.display='none';
   document.getElementById('contactStripWrap').style.display='none';
   document.getElementById('pMidTabs').style.display='none';
@@ -1701,25 +1904,20 @@ function renderChatHistory(){
     </div>`).join('');
   c.scrollTop=c.scrollHeight;
 }
-function qprompt(btn){
-  const txt=btn.textContent;addMsg('user',txt);
-  setTimeout(()=>{const k=txt.toLowerCase();const m=Object.keys(RESPONSES).find(r=>r!=='default'&&k.includes(r));addMsg('ai',m?RESPONSES[m]:RESPONSES['default']);},700);
-}
-async function sendChat(){
-  const ta=document.getElementById('chatTa');
-  const txt=ta.value.trim();
-  if(!txt||chatBusy)return;
+async function submitChatMessage(txt){
+  const message=(txt||'').trim();
+  if(!message||chatBusy)return;
   const sub=document.getElementById('chatSub');
   const status=document.getElementById('chatStatus');
   const healthCheckPhrases=[
     'anything new','what changed','new signals','since approval',
     'still on track','health check','any updates','what\'s new'
   ];
-  const isHealthCheck=healthCheckPhrases.some(p=>txt.toLowerCase().includes(p));
+  const isHealthCheck=healthCheckPhrases.some(p=>message.toLowerCase().includes(p));
   chatBusy=true;
-  addMsg('user',txt);ta.value='';ta.style.height='auto';
+  addMsg('user',message);
   if(API.isD365()&&currentPlanId){
-    const request={PlanId:currentPlanId,UserMessage:txt,ActionType:isHealthCheck?'health-check':'refine',getMetadata:function(){return{boundParameter:null,parameterTypes:{PlanId:{typeName:'Edm.String',structuralProperty:1},UserMessage:{typeName:'Edm.String',structuralProperty:1},ActionType:{typeName:'Edm.String',structuralProperty:1}},operationType:0,operationName:'accordin_RefinePlan'};}};
+    const request={PlanId:currentPlanId,UserMessage:message,ActionType:isHealthCheck?'health-check':'refine',getMetadata:function(){return{boundParameter:null,parameterTypes:{PlanId:{typeName:'Edm.String',structuralProperty:1},UserMessage:{typeName:'Edm.String',structuralProperty:1},ActionType:{typeName:'Edm.String',structuralProperty:1}},operationType:0,operationName:'accordin_RefinePlan'};}};
     try{
       if(status)status.classList.add('pulse');
       if(sub)sub.textContent=isHealthCheck?'Checking account health...':'Applying refinement...';
@@ -1758,12 +1956,23 @@ async function sendChat(){
     setChatPending('Processing your request...');
     setTimeout(()=>{
       clearChatPending();
-      const k=txt.toLowerCase();
+      const k=message.toLowerCase();
       const m=Object.keys(RESPONSES).find(r=>r!=='default'&&k.includes(r));
       addMsg('ai',m?RESPONSES[m]:RESPONSES['default']);
       chatBusy=false;
     },800);
   }
+}
+function qprompt(btn){
+  submitChatMessage(btn.textContent);
+}
+async function sendChat(){
+  const ta=document.getElementById('chatTa');
+  const txt=ta.value.trim();
+  if(!txt||chatBusy)return;
+  ta.value='';
+  ta.style.height='auto';
+  await submitChatMessage(txt);
 }
 
 // ═══════════════════════════════════════════════════════════════
